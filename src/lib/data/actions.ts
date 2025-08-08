@@ -8,6 +8,7 @@ import { eq, and, inArray, sql, desc } from 'drizzle-orm';
 import type { Objective, Team, OkrCycle, ObjectiveFormData, TeamFormData, CalendarSettings, CalendarSettingsFormData, TeamWithMembership, Member, KeyResult, OkrCycleFormData } from '@/types/okr';
 import { revalidatePath } from 'next/cache';
 import { ZodError } from 'zod';
+import { suggestOkrsImprovements } from '@/ai/flows/suggest-okr-improvements';
 
 async function getUserIdOrThrow(): Promise<string> {
     const session = await auth();
@@ -40,6 +41,7 @@ async function getObjectiveById(objectiveId: number): Promise<Objective> {
         ...objectiveRecord,
         keyResults: objectiveRecord.keyResults.map(kr => ({
             ...kr,
+            progress: kr.progress ?? 0,
             assignees: kr.keyResultAssignees.map(kra => kra.member)
         }))
     };
@@ -92,6 +94,7 @@ export async function getObjectives(): Promise<Objective[]> {
         ...obj,
         keyResults: obj.keyResults.map(kr => ({
             ...kr,
+            progress: kr.progress ?? 0,
             assignees: kr.keyResultAssignees.map(kra => kra.member)
         }))
     }));
@@ -99,21 +102,28 @@ export async function getObjectives(): Promise<Objective[]> {
 
 
 export async function saveObjective(data: ObjectiveFormData): Promise<Objective> {
-    const userId = await getUserIdOrThrow();
+    await getUserIdOrThrow();
 
     const savedObjectiveId = await db.transaction(async (tx) => {
         let currentObjectiveId: number;
+
+        // Ensure cycleId is present, which should be guaranteed by the form logic
+        if (!data.cycleId) {
+            throw new Error("Cycle ID is required to save an objective.");
+        }
 
         if (data.id) { // UPDATE
             const [updatedObjective] = await tx.update(schema.objectives)
                 .set({ description: data.description, teamId: data.teamId, cycleId: data.cycleId })
                 .where(eq(schema.objectives.id, data.id))
                 .returning({ id: schema.objectives.id });
+            if (!updatedObjective) throw new Error("Failed to update objective.");
             currentObjectiveId = updatedObjective.id;
         } else { // CREATE
             const [newObjective] = await tx.insert(schema.objectives)
                 .values({ description: data.description, teamId: data.teamId, cycleId: data.cycleId })
                 .returning({ id: schema.objectives.id });
+            if (!newObjective) throw new Error("Failed to create objective.");
             currentObjectiveId = newObjective.id;
         }
 
@@ -140,13 +150,17 @@ export async function saveObjective(data: ObjectiveFormData): Promise<Objective>
 }
 
 // Helper for saving a key result and its children within a transaction
-async function saveKeyResult(tx: any, krData: KeyResult & { objectiveId: number }) {
+async function saveKeyResult(tx: any, krData: Partial<KeyResult> & { objectiveId: number }) {
     let currentKrId: number;
+    
+    // Calculate progress based on initiatives and tasks
+    const calculatedProgress = calculateKrProgress(krData as KeyResult);
+
     const krRecord = {
         objectiveId: krData.objectiveId,
-        description: krData.description,
-        confidenceLevel: krData.confidenceLevel,
-        progress: calculateKrProgress(krData),
+        description: krData.description!,
+        confidenceLevel: krData.confidenceLevel!,
+        progress: calculatedProgress,
     };
 
     if (krData.id) {
@@ -167,67 +181,72 @@ async function saveKeyResult(tx: any, krData: KeyResult & { objectiveId: number 
     }
     
     // Sync initiatives
-    const existingInitiatives = await tx.query.initiatives.findMany({ where: eq(schema.initiatives.keyResultId, currentKrId), columns: { id: true } });
-    const existingInitIds = existingInitiatives.map(i => i.id);
-    const incomingInitIds = krData.initiatives.filter(i => i.id).map(i => i.id as number);
-    const initsToDelete = existingInitIds.filter(id => !incomingInitIds.includes(id));
-    if (initsToDelete.length > 0) {
-        await tx.delete(schema.initiatives).where(inArray(schema.initiatives.id, initsToDelete));
-    }
-    
-    for (const initiativeData of krData.initiatives) {
-        let currentInitId: number;
-        const initRecord = { keyResultId: currentKrId, description: initiativeData.description, status: initiativeData.status };
-
-        if (initiativeData.id) {
-            await tx.update(schema.initiatives).set(initRecord).where(eq(schema.initiatives.id, initiativeData.id));
-            currentInitId = initiativeData.id as number;
-        } else {
-            const [newInit] = await tx.insert(schema.initiatives).values(initRecord).returning({ id: schema.initiatives.id });
-            currentInitId = newInit.id;
+    if (krData.initiatives) {
+        const existingInitiatives = await tx.query.initiatives.findMany({ where: eq(schema.initiatives.keyResultId, currentKrId), columns: { id: true } });
+        const existingInitIds = existingInitiatives.map(i => i.id);
+        const incomingInitIds = krData.initiatives.filter(i => i.id).map(i => i.id as number);
+        const initsToDelete = existingInitIds.filter(id => !incomingInitIds.includes(id));
+        if (initsToDelete.length > 0) {
+            await tx.delete(schema.initiatives).where(inArray(schema.initiatives.id, initsToDelete));
         }
+        
+        for (const initiativeData of krData.initiatives) {
+            let currentInitId: number;
+            const initRecord = { keyResultId: currentKrId, description: initiativeData.description, status: initiativeData.status };
 
-        // Sync tasks
-        await tx.delete(schema.tasks).where(eq(schema.tasks.initiativeId, currentInitId));
-        if (initiativeData.tasks && initiativeData.tasks.length > 0) {
-            await tx.insert(schema.tasks).values(initiativeData.tasks.map(t => ({ initiativeId: currentInitId, description: t.description, completed: t.completed })));
+            if (initiativeData.id) {
+                await tx.update(schema.initiatives).set(initRecord).where(eq(schema.initiatives.id, initiativeData.id as number));
+                currentInitId = initiativeData.id as number;
+            } else {
+                const [newInit] = await tx.insert(schema.initiatives).values(initRecord).returning({ id: schema.initiatives.id });
+                currentInitId = newInit.id;
+            }
+
+            // Sync tasks
+            await tx.delete(schema.tasks).where(eq(schema.tasks.initiativeId, currentInitId));
+            if (initiativeData.tasks && initiativeData.tasks.length > 0) {
+                await tx.insert(schema.tasks).values(initiativeData.tasks.map(t => ({ initiativeId: currentInitId, description: t.description, completed: t.completed })));
+            }
         }
     }
+
 
      // Sync risks
-    const existingRisks = await tx.query.risks.findMany({ where: eq(schema.risks.keyResultId, currentKrId), columns: { id: true } });
-    const existingRiskIds = existingRisks.map(r => r.id);
-    const incomingRiskIds = krData.risks.filter(r => r.id).map(r => r.id as number);
-    const risksToDelete = existingRiskIds.filter(id => !incomingRiskIds.includes(id));
-    if (risksToDelete.length > 0) {
-        await tx.delete(schema.risks).where(inArray(schema.risks.id, risksToDelete));
-    }
+     if (krData.risks) {
+        const existingRisks = await tx.query.risks.findMany({ where: eq(schema.risks.keyResultId, currentKrId), columns: { id: true } });
+        const existingRiskIds = existingRisks.map(r => r.id);
+        const incomingRiskIds = krData.risks.filter(r => r.id).map(r => r.id as number);
+        const risksToDelete = existingRiskIds.filter(id => !incomingRiskIds.includes(id));
+        if (risksToDelete.length > 0) {
+            await tx.delete(schema.risks).where(inArray(schema.risks.id, risksToDelete));
+        }
 
-    for (const riskData of krData.risks) {
-        const riskRecord = { keyResultId: currentKrId, description: riskData.description, correctiveAction: riskData.correctiveAction, status: riskData.status };
-        if (riskData.id) {
-            await tx.update(schema.risks).set(riskRecord).where(eq(schema.risks.id, riskData.id));
-        } else {
-            await tx.insert(schema.risks).values(riskRecord);
+        for (const riskData of krData.risks) {
+            const riskRecord = { keyResultId: currentKrId, description: riskData.description, correctiveAction: riskData.correctiveAction, status: riskData.status };
+            if (riskData.id) {
+                await tx.update(schema.risks).set(riskRecord).where(eq(schema.risks.id, riskData.id as number));
+            } else {
+                await tx.insert(schema.risks).values(riskRecord);
+            }
         }
     }
 }
 
 function calculateKrProgress(krData: KeyResult): number {
     if (!krData.initiatives || krData.initiatives.length === 0) {
-        return krData.progress || 0;
+        return krData.progress || 0; // Return existing progress if no initiatives
     }
     const totalInitiativeProgress = krData.initiatives.reduce((sum, init) => {
-        const totalTasks = init.tasks.length;
-        if (totalTasks === 0) return sum;
+        if (!init.tasks || init.tasks.length === 0) return sum; // If an initiative has no tasks, it doesn't contribute to progress
         const completedTasks = init.tasks.filter(t => t.completed).length;
-        return sum + (completedTasks / totalTasks);
+        return sum + (completedTasks / init.tasks.length);
     }, 0);
     return Math.round((totalInitiativeProgress / krData.initiatives.length) * 100);
 }
 
 
 export async function deleteObjective(objectiveId: number): Promise<void> {
+    await getUserIdOrThrow();
     await db.delete(schema.objectives).where(eq(schema.objectives.id, objectiveId));
     revalidatePath('/objectives');
     revalidatePath('/dashboard');
@@ -259,22 +278,34 @@ export async function getTeams(): Promise<TeamWithMembership[]> {
     }));
 }
 
-export async function addTeam(teamData: { name: string }, ownerId: string) {
+export async function addTeam(teamData: TeamFormData) {
+    const userId = await getUserIdOrThrow();
+
     await db.transaction(async (tx) => {
         const [newTeam] = await tx.insert(schema.teams)
-            .values({ name: teamData.name, ownerId })
+            .values({ name: teamData.name, ownerId: userId })
             .returning();
         
         await tx.insert(schema.teamMemberships).values({
             teamId: newTeam.id,
-            userId: ownerId,
+            userId: userId,
             role: 'admin',
         });
+
+        if (teamData.members && teamData.members.length > 0) {
+            await tx.insert(schema.members).values(
+                teamData.members.map(m => ({
+                    teamId: newTeam.id,
+                    name: m.name,
+                    avatarUrl: m.avatarUrl || `https://placehold.co/40x40.png?text=${m.name.charAt(0)}`,
+                }))
+            );
+        }
 
          await tx.insert(schema.invitationLinks).values({
             teamId: newTeam.id,
             link: `${process.env.NEXTAUTH_URL}/teams/join/${crypto.randomUUID()}`,
-            creatorId: ownerId,
+            creatorId: userId,
         });
 
     });
@@ -282,16 +313,22 @@ export async function addTeam(teamData: { name: string }, ownerId: string) {
 }
 
 
-export async function updateTeam(teamData: Team) {
+export async function updateTeam(teamData: TeamFormData) {
+    await getUserIdOrThrow();
+    const teamId = teamData.id;
+    if (!teamId) throw new Error("Team ID is required for update.");
+
      await db.transaction(async (tx) => {
         await tx.update(schema.teams)
             .set({ name: teamData.name })
-            .where(eq(schema.teams.id, teamData.id));
+            .where(eq(schema.teams.id, teamId));
 
         // Get current members to avoid deleting and re-inserting unchanged members
-        const currentMembers = await tx.query.members.findMany({ where: eq(schema.members.teamId, teamData.id) });
-        const currentMemberNames = new Set(currentMembers.map(m => m.name));
-        const incomingMemberNames = new Set(teamData.members.map(m => m.name));
+        const currentMembers = await tx.query.members.findMany({ where: eq(schema.members.teamId, teamId) });
+        const incomingMembers = teamData.members || [];
+        
+        const currentMemberIds = new Set(currentMembers.map(m => m.id));
+        const incomingMemberNames = new Set(incomingMembers.map(m => m.name));
 
         // Delete members that are no longer in the list
         const membersToDelete = currentMembers.filter(m => !incomingMemberNames.has(m.name));
@@ -300,11 +337,17 @@ export async function updateTeam(teamData: Team) {
         }
 
         // Add new members
-        const membersToAdd = teamData.members.filter(m => !currentMemberNames.has(m.name));
+        const membersToAdd = incomingMembers.filter(m => {
+            // A simple check: if it has no ID, it must be new.
+            // This isn't perfect but works for this form's logic.
+            const existing = currentMembers.find(cm => cm.name === m.name);
+            return !existing;
+        });
+
          if (membersToAdd.length > 0) {
             await tx.insert(schema.members).values(
                 membersToAdd.map(m => ({
-                    teamId: teamData.id,
+                    teamId: teamId,
                     name: m.name,
                     avatarUrl: m.avatarUrl || `https://placehold.co/40x40.png?text=${m.name.charAt(0)}`,
                 }))
@@ -315,6 +358,7 @@ export async function updateTeam(teamData: Team) {
 }
 
 export async function deleteTeam(teamId: number): Promise<{ success: boolean, message?: string }> {
+    await getUserIdOrThrow();
     const assignedObjectivesCountResult = await db.select({ count: sql<number>`count(*)` }).from(schema.objectives)
         .where(eq(schema.objectives.teamId, teamId));
     
@@ -333,10 +377,15 @@ export async function deleteTeam(teamId: number): Promise<{ success: boolean, me
 // --- OKR Cycles ---
 export async function getOkrCycles(): Promise<OkrCycle[]> {
     const userId = await getUserIdOrThrow();
-    return db.query.okrCycles.findMany({
+    const cycles = await db.query.okrCycles.findMany({
         where: eq(schema.okrCycles.ownerId, userId),
         orderBy: desc(schema.okrCycles.startDate)
     });
+    return cycles.map(c => ({
+        ...c,
+        startDate: new Date(c.startDate),
+        endDate: new Date(c.endDate),
+    }));
 }
 
 export async function createOkrCycle(data: OkrCycleFormData) {
@@ -346,6 +395,7 @@ export async function createOkrCycle(data: OkrCycleFormData) {
 }
 
 export async function updateOkrCycle(data: OkrCycle) {
+    await getUserIdOrThrow();
     await db.update(schema.okrCycles)
         .set({ name: data.name, startDate: data.startDate, endDate: data.endDate })
         .where(eq(schema.okrCycles.id, data.id));
@@ -353,6 +403,7 @@ export async function updateOkrCycle(data: OkrCycle) {
 }
 
 export async function deleteOkrCycle(cycleId: number) {
+    await getUserIdOrThrow();
     // Optional: Check if cycle is linked to objectives before deleting
     const linkedObjectives = await db.query.objectives.findFirst({
         where: eq(schema.objectives.cycleId, cycleId)
@@ -373,7 +424,12 @@ export async function getActiveOkrCycle(): Promise<OkrCycle | null> {
         where: eq(schema.activeOkrCycles.userId, userId),
         with: { cycle: true }
     });
-    return activeCycleInfo?.cycle ?? null;
+    if (!activeCycleInfo?.cycle) return null;
+    return {
+        ...activeCycleInfo.cycle,
+        startDate: new Date(activeCycleInfo.cycle.startDate),
+        endDate: new Date(activeCycleInfo.cycle.endDate),
+    };
 }
 
 export async function setActiveOkrCycle(cycleId: number) {
@@ -387,6 +443,7 @@ export async function setActiveOkrCycle(cycleId: number) {
 
     revalidatePath('/dashboard');
     revalidatePath('/objectives');
+    revalidatePath('/calendar');
 }
 
 
@@ -398,7 +455,7 @@ export async function saveCalendarSettings(data: CalendarSettingsFormData): Prom
         userId,
         frequency: data.frequency,
         checkInDayOfWeek: data.checkInDayOfWeek,
-        evaluationDate: data.evaluationDate,
+        evaluationDate: data.evaluationDate ?? null,
     };
     
     await db.insert(schema.calendarSettings)
@@ -422,6 +479,27 @@ export async function getCalendarSettings(): Promise<CalendarSettings | null> {
 
 
 // --- AI Suggestions ---
-export { getOkrImprovementSuggestionsAction } from '@/lib/actions';
+export async function getOkrImprovementSuggestionsAction(objective: Objective) {
+    await getUserIdOrThrow();
 
-
+    const inputForAI = {
+        objectiveDescription: objective.description,
+        keyResults: objective.keyResults.map(kr => ({
+            keyResultDescription: kr.description,
+            progress: kr.progress,
+            confidenceLevel: kr.confidenceLevel,
+            initiatives: kr.initiatives.map(i => ({
+                initiativeDescription: i.description,
+                status: i.status
+            }))
+        }))
+    };
+    
+    try {
+        const suggestions = await suggestOkrsImprovements(inputForAI);
+        return suggestions;
+    } catch (error) {
+        console.error("AI suggestion generation failed:", error);
+        throw new Error("Failed to get AI suggestions.");
+    }
+}

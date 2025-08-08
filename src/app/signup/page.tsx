@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Target, UserPlus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { registerUser } from '@/lib/auth-actions';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -33,17 +34,9 @@ export default function SignupPage() {
     }
 
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const result = await registerUser({ username, password });
 
-      const data = await res.json();
-
-      if (res.ok) {
+      if (result.success) {
         toast({
           title: "ثبت‌نام موفق",
           description: "حساب کاربری شما با موفقیت ایجاد شد. اکنون می‌توانید وارد شوید.",
@@ -53,7 +46,7 @@ export default function SignupPage() {
         toast({
           variant: "destructive",
           title: "خطا در ثبت‌نام",
-          description: data.message || "مشکلی پیش آمده است. لطفاً دوباره تلاش کنید.",
+          description: result.message || "مشکلی پیش آمده است. لطفاً دوباره تلاش کنید.",
         });
       }
     } catch (error) {
@@ -89,6 +82,7 @@ export default function SignupPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={isLoading}
+                autoComplete="username"
               />
             </div>
             <div className="space-y-2">
@@ -101,6 +95,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                autoComplete="new-password"
               />
             </div>
           </CardContent>

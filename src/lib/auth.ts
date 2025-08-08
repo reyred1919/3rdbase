@@ -1,14 +1,15 @@
 
-import NextAuth, { type NextAuthOptions } from 'next-auth';
+import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import * as schema from '../../drizzle/schema';
+import * as schema from '@/drizzle/schema';
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from 'drizzle-orm';
+import type { Adapter } from 'next-auth/adapters';
 
 export const authOptions: NextAuthOptions = {
-  adapter: DrizzleAdapter(db),
+  adapter: DrizzleAdapter(db) as Adapter,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -67,5 +68,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
   },
-  secret: process.env.AUTH_SECRET,
+  secret: process.env.AUTH_SECRET || 'your-super-secret-key-for-development',
 };

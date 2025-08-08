@@ -2,8 +2,8 @@
 'use server';
 
 import { db } from '@/lib/db';
-import * as schema from '../../../drizzle/schema';
-import { auth } from '@/lib/auth';
+import * as schema from '@/drizzle/schema';
+import { auth } from '@/auth';
 import { eq, and, inArray, sql, desc } from 'drizzle-orm';
 import type { Objective, Team, OkrCycle, ObjectiveFormData, TeamFormData, CalendarSettings, CalendarSettingsFormData, TeamWithMembership, Member, KeyResult, OkrCycleFormData } from '@/types/okr';
 import { revalidatePath } from 'next/cache';

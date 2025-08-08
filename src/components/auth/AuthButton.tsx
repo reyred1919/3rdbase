@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,13 +12,12 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LogOut, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { signOut } from "next-auth/react"
 
 export default function AuthButton() {
   const { data: session, status } = useSession();
 
   const handleLogout = () => {
-    // No need to clear local storage anymore as it's fully deprecated.
-    // The server actions and database handle data persistence.
     signOut({ callbackUrl: '/' });
   };
 

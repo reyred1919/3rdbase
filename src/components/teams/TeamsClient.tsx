@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Card,
@@ -54,17 +54,23 @@ function ManageTeamDialog({
   isOpen: boolean;
   onClose: () => void;
   onSave: (team: TeamFormData) => void;
-  initialData?: Team | null;
+  initialData?: TeamWithMembership | null;
   isSubmitting: boolean;
 }) {
   const {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<TeamFormData>({
     resolver: zodResolver(teamSchema),
     defaultValues: { name: '', members: [] },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'members',
   });
 
   useEffect(() => {
@@ -86,7 +92,9 @@ function ManageTeamDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{initialData ? 'ویرایش تیم' : 'ایجاد تیم جدید'}</DialogTitle>
-          <DialogDescription>نام تیم را مشخص کنید. شما به صورت خودکار ادمین این تیم خواهید شد.</DialogDescription>
+          <DialogDescription>
+            نام تیم را مشخص کرده و اعضای آن را اضافه کنید. شما به صورت خودکار ادمین این تیم خواهید شد.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 py-4">
@@ -94,6 +102,39 @@ function ManageTeamDialog({
               <Label htmlFor="team-name">نام تیم</Label>
               <Input id="team-name" {...register('name')} className="mt-1" />
               {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
+            </div>
+
+            <div>
+              <Label>اعضای تیم</Label>
+              <div className="space-y-2 mt-2">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="flex items-center gap-2">
+                    <Input
+                      {...register(`members.${index}.name`)}
+                      placeholder={`نام عضو #${index + 1}`}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive h-9 w-9"
+                      onClick={() => remove(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => append({ name: '', avatarUrl: '' })}
+              >
+                <Plus className="h-4 w-4 ml-2" />
+                افزودن عضو
+              </Button>
             </div>
           </div>
           <DialogFooter>
@@ -110,6 +151,7 @@ function ManageTeamDialog({
     </Dialog>
   );
 }
+
 
 function InvitationLinkDisplay({ link }: { link: string | null | undefined }) {
   const [copied, setCopied] = useState(false);
@@ -334,3 +376,4 @@ export function TeamsClient() {
     </>
   );
 }
+

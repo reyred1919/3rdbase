@@ -22,6 +22,8 @@ import type { Objective, ObjectiveFormData, Member, Team, TeamWithMembership } f
 import { objectiveFormSchema } from '@/lib/schemas';
 import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, DEFAULT_KEY_RESULT, type ConfidenceLevel, RISK_STATUSES } from '@/lib/constants';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 interface ManageObjectiveDialogProps {
   isOpen: boolean;
@@ -99,11 +101,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
     } else {
       setTeamMembers([]);
     }
-    // Don't reset assignees on team change if there's initial data
-    if (!initialData) {
-      form.setValue('keyResults', form.getValues('keyResults').map(kr => ({ ...kr, assignees: [] })));
-    }
-  }, [selectedTeamId, teams, form, initialData]);
+  }, [selectedTeamId, teams]);
 
   const processSubmit = (data: ObjectiveFormData) => {
     onSubmit(data);
@@ -111,7 +109,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="font-headline">{initialData ? 'ویرایش هدف' : 'افزودن هدف جدید'}</DialogTitle>
           <DialogDescription>
@@ -119,127 +117,129 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(processSubmit)}>
-          <div className="space-y-6 pt-3 pr-6 pb-3 pl-2">
-            <div>
-              <Label htmlFor="objectiveDescription" className="font-semibold text-base">شرح هدف</Label>
-              <Textarea
-                id="objectiveDescription"
-                {...form.register('description')}
-                className="mt-1"
-                rows={3}
-                placeholder="مثال: ایجاد تحول در تجربه پشتیبانی مشتری"
-              />
-              {form.formState.errors.description && <p className="text-destructive text-sm mt-1">{form.formState.errors.description.message}</p>}
-            </div>
+          <ScrollArea className="max-h-[calc(80vh-150px)]">
+            <div className="space-y-6 pt-3 pr-6 pb-3 pl-2">
+              <div>
+                <Label htmlFor="objectiveDescription" className="font-semibold text-base">شرح هدف</Label>
+                <Textarea
+                  id="objectiveDescription"
+                  {...form.register('description')}
+                  className="mt-1"
+                  rows={3}
+                  placeholder="مثال: ایجاد تحول در تجربه پشتیبانی مشتری"
+                />
+                {form.formState.errors.description && <p className="text-destructive text-sm mt-1">{form.formState.errors.description.message}</p>}
+              </div>
 
-            <div>
-                <Label htmlFor="teamId" className="font-semibold text-base">تیم مسئول</Label>
-                 <Controller
-                    name="teamId"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={String(field.value)} disabled={teams.length === 0}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="انتخاب تیم" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teams.map(team => (
-                            <SelectItem key={team.id} value={String(team.id)}>{team.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                {form.formState.errors.teamId && <p className="text-destructive text-sm mt-1">{form.formState.errors.teamId.message}</p>}
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-3">نتایج کلیدی</h3>
-              {krFields.map((krItem, krIndex) => (
-                <Card key={krItem.id || krIndex} className="mb-4 p-4 border rounded-lg shadow-sm bg-card">
-                  <CardContent className="p-0 space-y-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <Label htmlFor={`keyResults.${krIndex}.description`} className="font-medium text-foreground">
-                        نتیجه کلیدی #{krIndex + 1}
-                      </Label>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => removeKr(krIndex)} 
-                        className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                        disabled={krFields.length <= 1}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <Textarea
-                      id={`keyResults.${krIndex}.description`}
-                      {...form.register(`keyResults.${krIndex}.description`)}
-                      placeholder="مثال: کاهش میانگین زمان پاسخگویی به میزان ۲۰٪"
-                      rows={2}
+              <div>
+                  <Label htmlFor="teamId" className="font-semibold text-base">تیم مسئول</Label>
+                  <Controller
+                      name="teamId"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={String(field.value)} disabled={teams.length === 0}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="انتخاب تیم" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {teams.map(team => (
+                              <SelectItem key={team.id} value={String(team.id)}>{team.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     />
-                    {form.formState.errors.keyResults?.[krIndex]?.description && <p className="text-destructive text-sm">{form.formState.errors.keyResults[krIndex]?.description?.message}</p>}
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`keyResults.${krIndex}.confidenceLevel`}>سطح اطمینان</Label>
-                        <Controller
-                          name={`keyResults.${krIndex}.confidenceLevel`}
-                          control={form.control}
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger className="mt-1">
-                                <SelectValue placeholder="انتخاب سطح اطمینان" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {CONFIDENCE_LEVELS.map(level => (
-                                  <SelectItem key={level} value={level}>{level}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                        {form.formState.errors.keyResults?.[krIndex]?.confidenceLevel && <p className="text-destructive text-sm">{form.formState.errors.keyResults[krIndex]?.confidenceLevel?.message}</p>}
+                  {form.formState.errors.teamId && <p className="text-destructive text-sm mt-1">{form.formState.errors.teamId.message}</p>}
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-3">نتایج کلیدی</h3>
+                {krFields.map((krItem, krIndex) => (
+                  <Card key={krItem.id || krIndex} className="mb-4 p-4 border rounded-lg shadow-sm bg-card">
+                    <CardContent className="p-0 space-y-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <Label htmlFor={`keyResults.${krIndex}.description`} className="font-medium text-foreground">
+                          نتیجه کلیدی #{krIndex + 1}
+                        </Label>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => removeKr(krIndex)} 
+                          className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                          disabled={krFields.length <= 1}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <div>
-                        <Label>مسئولین</Label>
-                        <Controller
-                            name={`keyResults.${krIndex}.assignees`}
+                      <Textarea
+                        id={`keyResults.${krIndex}.description`}
+                        {...form.register(`keyResults.${krIndex}.description`)}
+                        placeholder="مثال: کاهش میانگین زمان پاسخگویی به میزان ۲۰٪"
+                        rows={2}
+                      />
+                      {form.formState.errors.keyResults?.[krIndex]?.description && <p className="text-destructive text-sm">{form.formState.errors.keyResults[krIndex]?.description?.message}</p>}
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor={`keyResults.${krIndex}.confidenceLevel`}>سطح اطمینان</Label>
+                          <Controller
+                            name={`keyResults.${krIndex}.confidenceLevel`}
                             control={form.control}
                             render={({ field }) => (
-                                <MultiSelect
-                                    options={teamMembers}
-                                    selected={field.value || []}
-                                    onChange={field.onChange}
-                                    className="mt-1"
-                                    placeholder="انتخاب مسئولین..."
-                                    disabled={!selectedTeamId}
-                                />
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue placeholder="انتخاب سطح اطمینان" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {CONFIDENCE_LEVELS.map(level => (
+                                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
-                        />
-                         {form.formState.errors.keyResults?.[krIndex]?.assignees && <p className="text-destructive text-sm mt-1">{form.formState.errors.keyResults?.[krIndex]?.assignees?.message}</p>}
+                          />
+                          {form.formState.errors.keyResults?.[krIndex]?.confidenceLevel && <p className="text-destructive text-sm">{form.formState.errors.keyResults[krIndex]?.confidenceLevel?.message}</p>}
+                        </div>
+                        <div>
+                          <Label>مسئولین</Label>
+                          <Controller
+                              name={`keyResults.${krIndex}.assignees`}
+                              control={form.control}
+                              render={({ field }) => (
+                                  <MultiSelect
+                                      options={teamMembers}
+                                      selected={field.value || []}
+                                      onChange={field.onChange}
+                                      className="mt-1"
+                                      placeholder="انتخاب مسئولین..."
+                                      disabled={!selectedTeamId}
+                                  />
+                              )}
+                          />
+                          {form.formState.errors.keyResults?.[krIndex]?.assignees && <p className="text-destructive text-sm mt-1">{form.formState.errors.keyResults?.[krIndex]?.assignees?.message}</p>}
+                        </div>
                       </div>
-                    </div>
 
-                    <InitiativesArrayField control={form.control} krIndex={krIndex} register={form.register} errors={form.formState.errors} />
-                    <RisksArrayField control={form.control} krIndex={krIndex} register={form.register} errors={form.formState.errors} />
-                  </CardContent>
-                </Card>
-              ))}
-               {form.formState.errors.keyResults?.root && <p className="text-destructive text-sm mt-1">{form.formState.errors.keyResults.root.message}</p>}
-               {form.formState.errors.keyResults && !form.formState.errors.keyResults.root && typeof form.formState.errors.keyResults.message === 'string' && <p className="text-destructive text-sm mt-1">{form.formState.errors.keyResults.message}</p>}
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => appendKr({ description: '', confidenceLevel: 'متوسط', assignees: [], risks: [], initiatives: []})}
-                className="mt-2 w-full"
-                disabled={krFields.length >= 7}
-              >
-                <PlusCircle className="w-4 h-4 ml-2" /> افزودن نتیجه کلیدی
-              </Button>
+                      <InitiativesArrayField control={form.control} krIndex={krIndex} register={form.register} errors={form.formState.errors} />
+                      <RisksArrayField control={form.control} krIndex={krIndex} register={form.register} errors={form.formState.errors} />
+                    </CardContent>
+                  </Card>
+                ))}
+                {form.formState.errors.keyResults?.root && <p className="text-destructive text-sm mt-1">{form.formState.errors.keyResults.root.message}</p>}
+                {form.formState.errors.keyResults && !form.formState.errors.keyResults.root && typeof form.formState.errors.keyResults.message === 'string' && <p className="text-destructive text-sm mt-1">{form.formState.errors.keyResults.message}</p>}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => appendKr({ description: '', confidenceLevel: 'متوسط', assignees: [], risks: [], initiatives: []})}
+                  className="mt-2 w-full"
+                  disabled={krFields.length >= 7}
+                >
+                  <PlusCircle className="w-4 h-4 ml-2" /> افزودن نتیجه کلیدی
+                </Button>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
           <DialogFooter className="mt-8 pt-6 border-t sticky bottom-0 bg-background py-4">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={isSubmitting}>انصراف</Button>
@@ -371,3 +371,4 @@ function RisksArrayField({ control, krIndex, register, errors }: any) {
         </div>
     );
 }
+

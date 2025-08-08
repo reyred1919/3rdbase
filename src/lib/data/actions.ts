@@ -244,7 +244,8 @@ export async function getTeams(): Promise<TeamWithMembership[]> {
             team: {
                 with: {
                     members: true,
-                    owner: { columns: { name: true } }
+                    owner: { columns: { name: true } },
+                    invitationLink: true,
                 }
             }
         },
@@ -253,7 +254,8 @@ export async function getTeams(): Promise<TeamWithMembership[]> {
     
     return teamMemberships.map(tm => ({
         ...tm.team,
-        role: tm.role
+        role: tm.role,
+        invitationLink: tm.team.invitationLink?.link
     }));
 }
 
@@ -268,6 +270,13 @@ export async function addTeam(teamData: { name: string }, ownerId: string) {
             userId: ownerId,
             role: 'admin',
         });
+
+         await tx.insert(schema.invitationLinks).values({
+            teamId: newTeam.id,
+            link: `${process.env.NEXTAUTH_URL}/teams/join/${crypto.randomUUID()}`,
+            creatorId: ownerId,
+        });
+
     });
     revalidatePath('/teams');
 }
@@ -279,11 +288,22 @@ export async function updateTeam(teamData: Team) {
             .set({ name: teamData.name })
             .where(eq(schema.teams.id, teamData.id));
 
-        await tx.delete(schema.members).where(eq(schema.members.teamId, teamData.id));
+        // Get current members to avoid deleting and re-inserting unchanged members
+        const currentMembers = await tx.query.members.findMany({ where: eq(schema.members.teamId, teamData.id) });
+        const currentMemberNames = new Set(currentMembers.map(m => m.name));
+        const incomingMemberNames = new Set(teamData.members.map(m => m.name));
 
-        if (teamData.members.length > 0) {
+        // Delete members that are no longer in the list
+        const membersToDelete = currentMembers.filter(m => !incomingMemberNames.has(m.name));
+        if (membersToDelete.length > 0) {
+            await tx.delete(schema.members).where(inArray(schema.members.id, membersToDelete.map(m => m.id)));
+        }
+
+        // Add new members
+        const membersToAdd = teamData.members.filter(m => !currentMemberNames.has(m.name));
+         if (membersToAdd.length > 0) {
             await tx.insert(schema.members).values(
-                teamData.members.map(m => ({
+                membersToAdd.map(m => ({
                     teamId: teamData.id,
                     name: m.name,
                     avatarUrl: m.avatarUrl || `https://placehold.co/40x40.png?text=${m.name.charAt(0)}`,
@@ -403,3 +423,5 @@ export async function getCalendarSettings(): Promise<CalendarSettings | null> {
 
 // --- AI Suggestions ---
 export { getOkrImprovementSuggestionsAction } from '@/lib/actions';
+
+

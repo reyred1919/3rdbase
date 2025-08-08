@@ -8,15 +8,18 @@ import { addDays, startOfDay } from 'date-fns';
 const idSchema = z.union([z.string(), z.number()]).optional();
 
 export const memberSchema = z.object({
-  id: idSchema,
+  id: z.number().int(),
   name: z.string().min(1, "نام عضو الزامی است.").max(100, "نام عضو بیش از حد طولانی است."),
-  avatarUrl: z.string().url("آدرس آواتار نامعتبر است.").optional().or(z.literal('')),
+  avatarUrl: z.string().url("آدرس آواتار نامعتبر است.").optional().nullable(),
 });
 
 export const teamSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "نام تیم الزامی است.").max(100, "نام تیم بیش از حد طولانی است."),
-  members: z.array(memberSchema).optional().default([]),
+  members: z.array(z.object({ // Simplified for form usage
+      name: z.string().min(1, "نام عضو الزامی است."),
+      avatarUrl: z.string().optional(),
+  })).optional().default([]),
 });
 export type TeamFormData = z.infer<typeof teamSchema>;
 
@@ -109,3 +112,4 @@ export const calendarSettingsSchema = z.object({
   }).optional(),
 });
 export type CalendarSettingsFormData = z.infer<typeof calendarSettingsSchema>;
+

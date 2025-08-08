@@ -68,5 +68,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
   },
-  secret: process.env.AUTH_SECRET || 'your-super-secret-key-for-development',
+  secret: process.env.AUTH_SECRET,
 };

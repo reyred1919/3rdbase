@@ -21,8 +21,8 @@ export async function getTeams(): Promise<TeamWithMembership[]> {
 }
 
 
-export async function addTeam(data: { name: string }, ownerId: string) {
-  console.log("TODO: Implement DB call for addTeam", data, ownerId);
+export async function addTeam(teamData: { name: string }, ownerId: string) {
+  console.log("TODO: Implement DB call for addTeam", teamData, ownerId);
   // This would create a new team in the database.
   revalidatePath('/teams');
 }

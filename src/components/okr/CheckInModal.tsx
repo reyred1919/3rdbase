@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Lightbulb, Sparkles } from 'lucide-react';
 import type { Objective, ObjectiveFormData } from '@/types/okr';
-import { getOkrImprovementSuggestionsAction } from '@/lib/actions';
+import { getOkrImprovementSuggestionsAction } from '@/lib/data/actions';
 import { CONFIDENCE_LEVELS } from '@/lib/constants';
 import { checkInFormSchema, type CheckInFormData } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
@@ -29,9 +29,10 @@ interface CheckInModalProps {
   onClose: () => void;
   objective: Objective | null;
   onUpdateObjective: (updatedObjective: ObjectiveFormData) => void;
+  isSubmitting: boolean;
 }
 
-export function CheckInModal({ isOpen, onClose, objective, onUpdateObjective }: CheckInModalProps) {
+export function CheckInModal({ isOpen, onClose, objective, onUpdateObjective, isSubmitting }: CheckInModalProps) {
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isLoadingAiSuggestions, setIsLoadingAiSuggestions] = useState(false);
   const { toast } = useToast();
@@ -57,7 +58,6 @@ export function CheckInModal({ isOpen, onClose, objective, onUpdateObjective }: 
   const processCheckIn = (data: CheckInFormData) => {
     const updatedObjectiveData: ObjectiveFormData = {
         ...objective,
-        teamId: String(objective.teamId),
         keyResults: objective.keyResults.map(originalKr => {
             const updatedKrData = data.keyResults.find(ukr => ukr.id === originalKr.id);
             return {
@@ -65,16 +65,16 @@ export function CheckInModal({ isOpen, onClose, objective, onUpdateObjective }: 
                 progress: originalKr.progress || 0,
                 confidenceLevel: updatedKrData ? updatedKrData.confidenceLevel : originalKr.confidenceLevel,
                 initiatives: originalKr.initiatives.map(init => ({ ...init, tasks: init.tasks || [] })),
+                risks: originalKr.risks || [],
                 assignees: originalKr.assignees || [],
             };
         })
     };
     onUpdateObjective(updatedObjectiveData);
-    toast({ title: "ثبت پیشرفت ذخیره شد!", description: "سطح اطمینان OKR شما به‌روزرسانی شد." });
   };
 
   const handleGetAiSuggestions = async () => {
-    if (!objective) return; // Guard against null objective
+    if (!objective) return;
 
     setIsLoadingAiSuggestions(true);
     setAiSuggestions([]);
@@ -179,16 +179,19 @@ export function CheckInModal({ isOpen, onClose, objective, onUpdateObjective }: 
         
           <DialogFooter className="mt-8 pt-6 border-t gap-2">
             <DialogClose asChild>
-              <Button type="button" variant="outline">بستن</Button>
+              <Button type="button" variant="outline" disabled={isSubmitting || isLoadingAiSuggestions}>بستن</Button>
             </DialogClose>
-            <Button type="submit" variant="outline">ذخیره سطح اطمینان</Button>
-            <Button type="button" onClick={handleGetAiSuggestions} disabled={isLoadingAiSuggestions} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button type="submit" variant="default" disabled={isSubmitting || isLoadingAiSuggestions}>
+              {isSubmitting && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+              ذخیره پیشرفت
+            </Button>
+            <Button type="button" onClick={handleGetAiSuggestions} disabled={isLoadingAiSuggestions || isSubmitting} className="bg-accent hover:bg-accent/90 text-accent-foreground">
               {isLoadingAiSuggestions ? (
                 <Loader2 className="ml-2 h-4 w-4 animate-spin" />
               ) : (
                 <Lightbulb className="ml-2 h-4 w-4" />
               )}
-              دریافت پیشنهادهای هوش مصنوعی
+              دریافت پیشنهاد
             </Button>
           </DialogFooter>
         </form>

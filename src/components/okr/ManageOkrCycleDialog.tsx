@@ -25,13 +25,12 @@ interface ManageOkrCycleDialogProps {
   onSubmit: (data: OkrCycleFormData) => void;
   initialData?: OkrCycle | null;
   okrCycles: OkrCycle[];
+  isSubmitting: boolean;
 }
 
-export function ManageOkrCycleDialog({ isOpen, onClose, onSubmit, initialData, okrCycles }: ManageOkrCycleDialogProps) {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function ManageOkrCycleDialog({ isOpen, onClose, onSubmit, initialData, okrCycles, isSubmitting }: ManageOkrCycleDialogProps) {
   
-  const { control, handleSubmit, reset } = useForm<OkrCycleFormData>({
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<OkrCycleFormData>({
     resolver: zodResolver(okrCycleFormSchema),
   });
 
@@ -44,11 +43,7 @@ export function ManageOkrCycleDialog({ isOpen, onClose, onSubmit, initialData, o
   }, [isOpen, initialData, reset]);
 
   const processSubmit = async (data: OkrCycleFormData) => {
-    setIsSubmitting(true);
-    await onSubmit(data);
-    toast({ title: "چرخه OKR فعال به‌روزرسانی شد", description: "داده‌های نمایش داده شده در برنامه به‌روز خواهند شد." });
-    setIsSubmitting(false);
-    onClose();
+    onSubmit(data);
   };
 
   return (
@@ -62,34 +57,41 @@ export function ManageOkrCycleDialog({ isOpen, onClose, onSubmit, initialData, o
         </DialogHeader>
         <form onSubmit={handleSubmit(processSubmit)}>
           <div className="space-y-4 py-4">
-            <Controller
-              name="activeCycleId"
-              control={control}
-              render={({ field }) => (
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  value={String(field.value)}
-                  className="grid grid-cols-1 gap-2"
-                >
-                  {okrCycles.map((cycle) => (
-                    <Label 
-                      key={cycle.id} 
-                      htmlFor={`cycle-${cycle.id}`} 
-                      className="flex items-center space-x-2 space-x-reverse p-3 border rounded-md hover:bg-muted/50 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary"
+             {okrCycles.length > 0 ? (
+                <Controller
+                  name="activeCycleId"
+                  control={control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={String(field.value)}
+                      className="grid grid-cols-1 gap-2"
                     >
-                      <RadioGroupItem value={String(cycle.id)} id={`cycle-${cycle.id}`} />
-                      <span>{cycle.name}</span>
-                    </Label>
-                  ))}
-                </RadioGroup>
-              )}
-            />
+                      {okrCycles.map((cycle) => (
+                        <Label 
+                          key={cycle.id} 
+                          htmlFor={`cycle-${cycle.id}`} 
+                          className="flex items-center space-x-2 space-x-reverse p-3 border rounded-md hover:bg-muted/50 cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary"
+                        >
+                          <RadioGroupItem value={String(cycle.id)} id={`cycle-${cycle.id}`} />
+                          <span>{cycle.name}</span>
+                        </Label>
+                      ))}
+                    </RadioGroup>
+                  )}
+                />
+             ) : (
+                <p className="text-center text-muted-foreground p-4 bg-muted rounded-md">
+                    هنوز هیچ چرخه OKRی تعریف نشده است.
+                </p>
+             )}
+            {errors.activeCycleId && <p className="text-destructive text-sm mt-1">{errors.activeCycleId.message}</p>}
           </div>
           <DialogFooter className="mt-6 pt-4 border-t">
             <DialogClose asChild>
-              <Button type="button" variant="outline">انصراف</Button>
+              <Button type="button" variant="outline" disabled={isSubmitting}>انصراف</Button>
             </DialogClose>
-            <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+            <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting || okrCycles.length === 0}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               ذخیره
             </Button>

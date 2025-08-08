@@ -17,8 +17,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trash2, PlusCircle } from 'lucide-react';
-import type { Objective, ObjectiveFormData, Member, Team } from '@/types/okr';
+import { Trash2, PlusCircle, Loader2 } from 'lucide-react';
+import type { Objective, ObjectiveFormData, Member, Team, TeamWithMembership } from '@/types/okr';
 import { objectiveFormSchema } from '@/lib/schemas';
 import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, DEFAULT_KEY_RESULT, type ConfidenceLevel, RISK_STATUSES } from '@/lib/constants';
 import { MultiSelect } from '@/components/ui/multi-select';
@@ -28,26 +28,20 @@ interface ManageObjectiveDialogProps {
   onClose: () => void;
   onSubmit: (data: ObjectiveFormData) => void;
   initialData?: Objective | null;
-  teams: Team[];
+  teams: TeamWithMembership[];
   cycleId: number;
+  isSubmitting: boolean;
 }
 
 type KeyResultFormData = ObjectiveFormData['keyResults'][number];
 
 const getInitialKeyResultsForForm = (objective: Objective | null | undefined): KeyResultFormData[] => {
   const defaultKrTemplate: KeyResultFormData = { 
-<<<<<<< HEAD
-    description: DEFAULT_KEY_RESULT.description,
-    progress: DEFAULT_KEY_RESULT.progress,
-    confidenceLevel: DEFAULT_KEY_RESULT.confidenceLevel || 'متوسط' as ConfidenceLevel,
-    initiatives: DEFAULT_KEY_RESULT.initiatives.map(init => ({...init, tasks: []})),
-    risks: DEFAULT_KEY_RESULT.risks.map(risk => ({...risk})),
-=======
     description: '',
     progress: 0,
     confidenceLevel: 'متوسط' as ConfidenceLevel,
     initiatives: [],
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+    risks: [],
     assignees: [],
   };
   const minKrs = 1;
@@ -58,31 +52,27 @@ const getInitialKeyResultsForForm = (objective: Objective | null | undefined): K
       id: kr.id,
       description: kr.description,
       progress: kr.progress ?? 0,
-<<<<<<< HEAD
+      confidenceLevel: kr.confidenceLevel,
       initiatives: kr.initiatives ? kr.initiatives.map(init => ({...init, tasks: init.tasks || []})) : [],
       risks: kr.risks ? kr.risks.map(r => ({...r})) : [],
-=======
-      confidenceLevel: kr.confidenceLevel,
-      initiatives: kr.initiatives ? kr.initiatives.map(init => ({...init, id: init.id, tasks: init.tasks || []})) : [],
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
       assignees: kr.assignees || [],
     }));
   }
   
   while (krsToUse.length < minKrs) {
-<<<<<<< HEAD
-    krsToUse.push({ ...defaultKrTemplate, initiatives: [], risks: [], assignees: [] }); 
-=======
     krsToUse.push({ ...defaultKrTemplate }); 
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
   }
   return krsToUse;
 };
 
 
-export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, teams, cycleId }: ManageObjectiveDialogProps) {
+export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, teams, cycleId, isSubmitting }: ManageObjectiveDialogProps) {
   const form = useForm<ObjectiveFormData>({
     resolver: zodResolver(objectiveFormSchema),
+    defaultValues: {
+      description: '',
+      keyResults: getInitialKeyResultsForForm(null),
+    }
   });
 
   const { fields: krFields, append: appendKr, remove: removeKr } = useFieldArray({
@@ -95,36 +85,28 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
 
   useEffect(() => {
     if (isOpen) {
-<<<<<<< HEAD
       const defaultValues = initialData
-        ? { ...initialData, description: initialData.description || '', teamId: initialData.teamId, keyResults: getInitialKeyResultsForForm(initialData), cycleId: initialData.cycleId }
-        : { description: '', teamId: undefined, keyResults: getInitialKeyResultsForForm(null), cycleId: cycleId };
+        ? { ...initialData, keyResults: getInitialKeyResultsForForm(initialData) }
+        : { description: '', teamId: teams[0]?.id, keyResults: getInitialKeyResultsForForm(null), cycleId };
       form.reset(defaultValues);
     }
-  }, [isOpen, initialData, teams, cycleId, form.reset]);
-=======
-      const defaultValues: ObjectiveFormData = initialData
-        ? { id: initialData.id, description: initialData.description || '', teamId: String(initialData.teamId), keyResults: getInitialKeyResultsForForm(initialData) }
-        : { description: '', teamId: teams[0]?.id.toString() || '', keyResults: getInitialKeyResultsForForm(null) };
-      form.reset(defaultValues);
-    }
-  }, [isOpen, initialData, teams, form]);
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+  }, [isOpen, initialData, teams, cycleId, form]);
   
   useEffect(() => {
     if (selectedTeamId) {
-      const team = teams.find(t => t.id === parseInt(selectedTeamId));
+      const team = teams.find(t => t.id === selectedTeamId);
       setTeamMembers(team ? team.members : []);
     } else {
       setTeamMembers([]);
     }
-    // Reset assignees when team changes
-    form.setValue('keyResults', form.getValues('keyResults').map(kr => ({ ...kr, assignees: [] })));
-  }, [selectedTeamId, teams, form]);
+    // Don't reset assignees on team change if there's initial data
+    if (!initialData) {
+      form.setValue('keyResults', form.getValues('keyResults').map(kr => ({ ...kr, assignees: [] })));
+    }
+  }, [selectedTeamId, teams, form, initialData]);
 
   const processSubmit = (data: ObjectiveFormData) => {
     onSubmit(data);
-    onClose(); 
   };
   
   return (
@@ -156,7 +138,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
                     name="teamId"
                     control={form.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={String(field.value)} disabled={teams.length === 0}>
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="انتخاب تیم" />
                         </SelectTrigger>
@@ -174,7 +156,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
             <div>
               <h3 className="text-lg font-semibold mb-3">نتایج کلیدی</h3>
               {krFields.map((krItem, krIndex) => (
-                <Card key={krItem.id} className="mb-4 p-4 border rounded-lg shadow-sm bg-card">
+                <Card key={krItem.id || krIndex} className="mb-4 p-4 border rounded-lg shadow-sm bg-card">
                   <CardContent className="p-0 space-y-4">
                     <div className="flex justify-between items-center mb-2">
                       <Label htmlFor={`keyResults.${krIndex}.description`} className="font-medium text-foreground">
@@ -250,11 +232,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
               <Button 
                 type="button" 
                 variant="outline" 
-<<<<<<< HEAD
-                onClick={() => appendKr({...DEFAULT_KEY_RESULT, confidenceLevel: DEFAULT_KEY_RESULT.confidenceLevel || 'متوسط', assignees: [], risks: []})} 
-=======
-                onClick={() => appendKr({...DEFAULT_KEY_RESULT, confidenceLevel: 'متوسط', assignees: []})} 
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+                onClick={() => appendKr({ description: '', confidenceLevel: 'متوسط', assignees: [], risks: [], initiatives: []})}
                 className="mt-2 w-full"
                 disabled={krFields.length >= 7}
               >
@@ -264,9 +242,12 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
           </div>
           <DialogFooter className="mt-8 pt-6 border-t sticky bottom-0 bg-background py-4">
             <DialogClose asChild>
-              <Button type="button" variant="outline">انصراف</Button>
+              <Button type="button" variant="outline" disabled={isSubmitting}>انصراف</Button>
             </DialogClose>
-            <Button type="submit" className="bg-primary hover:bg-primary/90">ذخیره هدف</Button>
+            <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+              ذخیره هدف
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

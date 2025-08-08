@@ -1,5 +1,5 @@
 
-export { default } from "next-auth/middleware";
+export { auth as middleware } from "@/lib/auth"
 
 export const config = {
   // Matches all routes except for the ones starting with:
@@ -10,5 +10,5 @@ export const config = {
   // - /login (login page)
   // - /signup (signup page)
   // - / (landing page)
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login|signup|^/$).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login|signup|^/?$).*)'],
 };

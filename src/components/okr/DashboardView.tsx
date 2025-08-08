@@ -11,12 +11,8 @@ import { Target, TrendingUp, Clock, ArrowRight, GanttChartSquare, Smile, Meh, Fr
 import { differenceInCalendarDays, format } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
-<<<<<<< HEAD
-import { getActiveOkrCycle, getObjectives } from '@/lib/actions';
-=======
 import { useSession } from 'next-auth/react';
-import { getObjectives, getOkrCycle } from '@/lib/data/actions';
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+import { getObjectives, getActiveOkrCycle } from '@/lib/data/actions';
 
 const getProgressIndicatorClass = (progress: number): string => {
     if (progress >= 75) return 'bg-green-500';
@@ -41,31 +37,7 @@ const getProgressIcon = (progress: number) => {
 export function DashboardView() {
   const { data: session, status } = useSession();
   const [objectives, setObjectives] = useState<Objective[]>([]);
-<<<<<<< HEAD
   const [activeCycle, setActiveCycle] = useState<OkrCycle | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    async function fetchData() {
-        const [objectivesData, cycleData] = await Promise.all([
-            getObjectives(),
-            getActiveOkrCycle(),
-        ]);
-        setObjectives(objectivesData);
-        if (cycleData) {
-            // Convert string dates to Date objects
-            setActiveCycle({
-                ...cycleData,
-                startDate: new Date(cycleData.startDate),
-                endDate: new Date(cycleData.endDate),
-            });
-        }
-        setIsMounted(true);
-    }
-    fetchData();
-  }, []);
-=======
-  const [okrCycle, setOkrCycle] = useState<OkrCycle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -75,11 +47,12 @@ export function DashboardView() {
         try {
           const [objectivesData, cycleData] = await Promise.all([
             getObjectives(),
-            getOkrCycle(),
+            getActiveOkrCycle(),
           ]);
           setObjectives(objectivesData);
           if (cycleData) {
-            setOkrCycle({
+            setActiveCycle({
+              ...cycleData,
               startDate: new Date(cycleData.startDate),
               endDate: new Date(cycleData.endDate),
             });
@@ -96,12 +69,10 @@ export function DashboardView() {
         setIsLoading(false);
     }
   }, [status]);
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
 
   const summaryStats = useMemo(() => {
     let totalProgressSum = 0;
     let totalKeyResultsCount = 0;
-    let totalConfidenceScore = 0;
 
     const confidenceValueMapping: Record<ConfidenceLevel, number> = {
         'زیاد': 3,
@@ -118,20 +89,16 @@ export function DashboardView() {
     };
 
     const objectivesWithProgress: { id: string | number; description: string; progress: number }[] = [];
+    const confidenceCounts: Record<ConfidenceLevel, number> = { 'زیاد': 0, 'متوسط': 0, 'کم': 0, 'در معرض خطر': 0 };
 
-    const filteredObjectives = activeCycle 
-        ? objectives.filter(obj => obj.cycleId === activeCycle.id)
-        : objectives;
-
-    filteredObjectives.forEach(obj => {
+    objectives.forEach(obj => {
       let totalKrProgress = 0;
       let keyResultsCountInObj = obj.keyResults.length;
       
       obj.keyResults.forEach(kr => {
         totalProgressSum += kr.progress;
         totalKeyResultsCount++;
-        totalConfidenceScore += confidenceValueMapping[kr.confidenceLevel];
-        
+        confidenceCounts[kr.confidenceLevel]++;
         totalKrProgress += kr.progress;
       });
       
@@ -164,19 +131,15 @@ export function DashboardView() {
       }
     }
     
-    const averageConfidenceScore = totalKeyResultsCount > 0 ? totalConfidenceScore / totalKeyResultsCount : 0;
-    let averageConfidenceLabel: ConfidenceLevel = 'در معرض خطر';
-    if (averageConfidenceScore >= 2.5) {
-        averageConfidenceLabel = 'زیاد';
-    } else if (averageConfidenceScore >= 1.5) {
-        averageConfidenceLabel = 'متوسط';
-    } else if (averageConfidenceScore >= 0.5) {
-        averageConfidenceLabel = 'کم';
+    let dominantConfidence: ConfidenceLevel = 'متوسط';
+    if(totalKeyResultsCount > 0) {
+        dominantConfidence = (Object.keys(confidenceCounts) as ConfidenceLevel[]).reduce((a, b) => confidenceCounts[a] > confidenceCounts[b] ? a : b);
     }
-    const averageConfidenceMeta = confidenceMeta[averageConfidenceLabel];
+    const dominantConfidenceMeta = confidenceMeta[dominantConfidence];
+
 
     return {
-      totalObjectives: filteredObjectives.length,
+      totalObjectives: objectives.length,
       totalKeyResults: totalKeyResultsCount,
       averageProgress: parseFloat(averageProgress.toFixed(1)),
       remainingDays,
@@ -186,10 +149,10 @@ export function DashboardView() {
         end: format(activeCycle.endDate, "d MMMM yyyy", { locale: faIR }) 
       } : null,
       cycleName: activeCycle?.name,
-      averageConfidence: {
-        label: averageConfidenceLabel,
-        Icon: averageConfidenceMeta.icon,
-        colorClass: averageConfidenceMeta.colorClass
+      dominantConfidence: {
+        label: dominantConfidence,
+        Icon: dominantConfidenceMeta.icon,
+        colorClass: dominantConfidenceMeta.colorClass
       },
       objectivesWithProgress,
     };
@@ -209,7 +172,10 @@ export function DashboardView() {
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <div>
             <h2 className="text-2xl font-semibold font-headline text-foreground">داشبورد خلاصه وضعیت OKR</h2>
-            {summaryStats.cycleName && <p className="text-muted-foreground text-sm mt-1">نمایش داده‌ها برای چرخه: <span className="font-semibold text-primary">{summaryStats.cycleName}</span></p>}
+            {summaryStats.cycleName ? 
+              <p className="text-muted-foreground text-sm mt-1">نمایش داده‌ها برای چرخه: <span className="font-semibold text-primary">{summaryStats.cycleName}</span></p>
+              : <p className="text-destructive text-sm mt-1">هیچ چرخه فعالی انتخاب نشده است. لطفاً از صفحه مدیریت اهداف یک چرخه را فعال کنید.</p>
+            }
         </div>
         <Button asChild>
           <Link href="/objectives">
@@ -251,12 +217,12 @@ export function DashboardView() {
         </Card>
          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">میانگین سطح اطمینان</CardTitle>
-                {summaryStats.averageConfidence && <summaryStats.averageConfidence.Icon className="h-5 w-5 text-muted-foreground" />}
+                <CardTitle className="text-sm font-medium">سطح اطمینان غالب</CardTitle>
+                {summaryStats.dominantConfidence && <summaryStats.dominantConfidence.Icon className="h-5 w-5 text-muted-foreground" />}
             </CardHeader>
             <CardContent>
-                <div className={`text-2xl font-bold ${summaryStats.averageConfidence?.colorClass}`}>
-                    {summaryStats.averageConfidence?.label}
+                <div className={`text-2xl font-bold ${summaryStats.dominantConfidence?.colorClass}`}>
+                    {summaryStats.dominantConfidence?.label}
                 </div>
                 <p className="text-xs text-muted-foreground">بر اساس ارزیابی‌های نتایج کلیدی</p>
             </CardContent>

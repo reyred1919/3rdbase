@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import type { Objective } from '@/types/okr';
-=======
 
-import type { Objective, Team } from '@/types/okr';
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+import type { Objective } from '@/types/okr';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { KeyResultDisplay } from './KeyResultDisplay';
@@ -21,7 +17,7 @@ interface ObjectiveCardProps {
 }
 
 export function ObjectiveCard({ objective, teamName, onEdit, onCheckIn }: ObjectiveCardProps) {
-  const [openKeyResult, setOpenKeyResult] = React.useState<string | undefined>(objective.keyResults.length > 0 ? `kr-0` : undefined);
+  const [openKeyResult, setOpenKeyResult] = React.useState<string | undefined>(objective.keyResults.length > 0 ? `kr-${objective.keyResults[0].id}` : undefined);
   
   return (
     <Card className="mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-xl overflow-hidden">
@@ -55,8 +51,8 @@ export function ObjectiveCard({ objective, teamName, onEdit, onCheckIn }: Object
       <CardContent className="p-5 bg-background/50">
         {objective.keyResults.length > 0 ? (
            <Accordion type="single" collapsible className="w-full space-y-3" value={openKeyResult} onValueChange={setOpenKeyResult}>
-            {objective.keyResults.map((kr, index) => (
-              <AccordionItem value={`kr-${index}`} key={kr.id} className="border bg-card rounded-lg shadow-sm overflow-hidden">
+            {objective.keyResults.map((kr) => (
+              <AccordionItem value={`kr-${kr.id}`} key={kr.id} className="border bg-card rounded-lg shadow-sm overflow-hidden">
                 <AccordionTrigger className="p-4 hover:no-underline focus:no-underline hover:bg-secondary/30 data-[state=open]:bg-secondary/30">
                   <div className="flex justify-between items-center w-full">
                     <span className="font-medium text-foreground text-sm sm:text-base flex-grow break-words pl-2 text-right">{kr.description}</span>
@@ -70,7 +66,7 @@ export function ObjectiveCard({ objective, teamName, onEdit, onCheckIn }: Object
                                   <TooltipTrigger asChild>
                                     <Avatar className="h-6 w-6 border-2 border-background">
                                       {assignee.avatarUrl && <AvatarImage src={assignee.avatarUrl} alt={assignee.name} />}
-                                      <AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback>
+                                      <AvatarFallback>{assignee.name?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                   </TooltipTrigger>
                                   <TooltipContent><p>{assignee.name}</p></TooltipContent>

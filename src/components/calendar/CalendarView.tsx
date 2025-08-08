@@ -32,10 +32,10 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 
-import type { OkrCycle, CalendarSettings, ScheduledMeeting, CalendarSettingsFormData } from '@/types/okr';
-import { calendarSettingsSchema } from '@/lib/schemas';
+import type { OkrCycle, CalendarSettings, ScheduledMeeting } from '@/types/okr';
+import { calendarSettingsSchema, type CalendarSettingsFormData } from '@/lib/schemas';
 import { MEETING_FREQUENCIES, PERSIAN_WEEK_DAYS } from '@/lib/constants';
-import { getOkrCycle, saveOkrCycle, getCalendarSettings, saveCalendarSettings } from '@/lib/data/actions';
+import { getActiveOkrCycle, saveCalendarSettings, getCalendarSettings } from '@/lib/data/actions';
 
 
 function isPast(date: Date): boolean {
@@ -44,7 +44,7 @@ function isPast(date: Date): boolean {
 
 export function CalendarView() {
   const [isMounted, setIsMounted] = useState(false);
-  const [okrCycle, setOkrCycle] = useState<OkrCycle | null>(null);
+  const [activeCycle, setActiveCycle] = useState<OkrCycle | null>(null);
   const [calendarSettings, setCalendarSettings] = useState<CalendarSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -62,12 +62,13 @@ export function CalendarView() {
       setIsLoading(true);
       try {
         const [cycleData, settingsData] = await Promise.all([
-          getOkrCycle(),
+          getActiveOkrCycle(),
           getCalendarSettings(),
         ]);
         
         if (cycleData) {
-          setOkrCycle({
+          setActiveCycle({
+            ...cycleData,
             startDate: new Date(cycleData.startDate),
             endDate: new Date(cycleData.endDate),
           });
@@ -116,10 +117,10 @@ export function CalendarView() {
   };
 
   const scheduledMeetings = useMemo((): ScheduledMeeting[] => {
-    if (!okrCycle || !calendarSettings) return [];
+    if (!activeCycle || !calendarSettings) return [];
 
     const meetings: ScheduledMeeting[] = [];
-    const { startDate, endDate } = okrCycle;
+    const { startDate, endDate } = activeCycle;
     const { frequency, checkInDayOfWeek, evaluationDate } = calendarSettings;
 
     let currentDate = startOfDay(startDate);
@@ -171,7 +172,7 @@ export function CalendarView() {
     }
 
     return meetings.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [okrCycle, calendarSettings]);
+  }, [activeCycle, calendarSettings]);
 
   if (isLoading || !isMounted) {
     return (
@@ -182,7 +183,7 @@ export function CalendarView() {
     );
   }
 
-  if (!okrCycle) {
+  if (!activeCycle) {
     return (
       <div className="flex flex-col items-center text-center py-12">
         <Image
@@ -195,9 +196,9 @@ export function CalendarView() {
         />
         <h1 className="text-3xl font-bold font-headline text-foreground mb-4">تقویم جلسات OKR</h1>
         <Alert variant="destructive" className="max-w-md text-center">
-          <AlertTitle className="font-semibold">چرخه OKR تنظیم نشده است</AlertTitle>
+          <AlertTitle className="font-semibold">چرخه OKR فعال نیست</AlertTitle>
           <AlertDescription>
-            برای استفاده از تقویم، ابتدا باید یک چرخه OKR (تاریخ شروع و پایان) در صفحه <Link href="/objectives" className="font-medium text-primary hover:underline">مدیریت اهداف</Link> تنظیم کنید.
+            برای استفاده از تقویم، ابتدا باید یک چرخه OKR در صفحه <Link href="/objectives" className="font-medium text-primary hover:underline">مدیریت اهداف</Link> فعال کنید.
           </AlertDescription>
         </Alert>
       </div>
@@ -275,9 +276,9 @@ export function CalendarView() {
                       placeholderText="انتخاب تاریخ ارزیابی"
                       className="mt-1"
                       disabled={(date) =>
-                          !okrCycle ||
-                          isBefore(date, startOfDay(okrCycle.startDate)) ||
-                          isAfter(date, endOfDay(okrCycle.endDate))
+                          !activeCycle ||
+                          isBefore(date, startOfDay(activeCycle.startDate)) ||
+                          isAfter(date, endOfDay(activeCycle.endDate))
                       }
                     />
                 )}
@@ -301,9 +302,9 @@ export function CalendarView() {
             <CalendarDays className="w-6 h-6 text-primary" />
             زمان‌بندی جلسات
           </CardTitle>
-          {okrCycle && (
+          {activeCycle && (
             <CardDescription>
-              چرخه فعلی: {format(okrCycle.startDate, "d MMMM yyyy", { locale: faIR })} تا {format(okrCycle.endDate, "d MMMM yyyy", { locale: faIR })}
+              چرخه فعلی: {format(activeCycle.startDate, "d MMMM yyyy", { locale: faIR })} تا {format(activeCycle.endDate, "d MMMM yyyy", { locale: faIR })}
             </CardDescription>
           )}
         </CardHeader>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
 import type { Objective, Initiative, Task, ObjectiveFormData } from '@/types/okr';
@@ -10,16 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ListChecks, GanttChartSquare, Settings, AlertCircle, Loader2 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ListChecks, Settings, AlertCircle, Loader2 } from 'lucide-react';
 import type { InitiativeStatus } from '@/lib/constants';
-<<<<<<< HEAD
-import { getObjectives, updateInitiative } from '@/lib/actions'; // Import server actions
-import { useToast } from "@/hooks/use-toast";
-=======
 import { getObjectives, saveObjective } from '@/lib/data/actions';
 import { useToast } from '@/hooks/use-toast';
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
 
 const ManageInitiativeDialog = dynamic(() => import('@/components/tasks/ManageInitiativeDialog').then(mod => mod.ManageInitiativeDialog), {
   loading: () => <p>در حال بارگذاری...</p>,
@@ -36,56 +30,40 @@ const statusStyles: Record<InitiativeStatus, string> = {
 interface InitiativeViewModel {
   initiative: Initiative;
   objectiveId: number;
-  objectiveDescription: string;
   keyResultId: number;
+  objectiveDescription: string;
   keyResultDescription: string;
   shortCode: string;
 }
 
 export function TasksView() {
   const { data: session, status } = useSession();
+  const [isPending, startTransition] = useTransition();
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingInitiative, setEditingInitiative] = useState<InitiativeViewModel | null>(null);
   const [isManageInitiativeDialogOpen, setIsManageInitiativeDialogOpen] = useState(false);
   const { toast } = useToast();
 
-<<<<<<< HEAD
   const fetchData = useCallback(async () => {
-    setIsMounted(false);
-    const objectivesData = await getObjectives();
-    const objectivesWithDefaults = objectivesData.map(obj => ({
-        ...obj,
-        keyResults: obj.keyResults.map(kr => ({
-            ...kr,
-            initiatives: kr.initiatives.map(init => ({
-                ...init,
-                tasks: init.tasks || [], 
-            })),
-        })),
-    }));
-    setObjectives(objectivesWithDefaults);
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-=======
-  useEffect(() => {
-    if (status === 'authenticated') {
-        setIsLoading(true);
-        getObjectives()
-            .then(setObjectives)
-            .catch(() => toast({ variant: "destructive", title: "خطا در بارگذاری داده‌ها" }))
-            .finally(() => setIsLoading(false));
+    if(status !== 'authenticated') {
+        setIsLoading(false);
+        return;
     }
-     if (status === 'unauthenticated') {
+    setIsLoading(true);
+    try {
+        const objectivesData = await getObjectives();
+        setObjectives(objectivesData);
+    } catch(e) {
+        toast({ variant: "destructive", title: "خطا در بارگذاری داده‌ها" });
+    } finally {
         setIsLoading(false);
     }
   }, [status, toast]);
 
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const initiativeViewModels = useMemo((): InitiativeViewModel[] => {
     const flatList: InitiativeViewModel[] = [];
@@ -116,87 +94,43 @@ export function TasksView() {
     setIsManageInitiativeDialogOpen(false);
   };
 
-<<<<<<< HEAD
-  const handleSaveInitiative = async (updatedInitiative: Initiative) => {
-    if (!editingInitiative) return;
-
-    try {
-        await updateInitiative(
-            editingInitiative.objectiveId,
-            editingInitiative.keyResultId,
-            updatedInitiative
-        );
-        toast({ title: "اقدام به‌روزرسانی شد", description: "پیشرفت وظایف و نتیجه کلیدی مرتبط محاسبه و ذخیره شد." });
-        handleCloseDialog();
-        fetchData(); // Re-fetch all data to ensure UI consistency
-    } catch (error) {
-        toast({ title: "خطا", description: "در به‌روزرسانی اقدام خطایی روی داد.", variant: "destructive" });
-    }
-  };
-=======
   const handleSaveInitiative = useCallback(async (updatedInitiative: Initiative) => {
     if (!editingInitiative) return;
-
-    const { objectiveId, keyResultId } = editingInitiative;
-    const originalObjective = objectives.find(o => o.id === objectiveId);
-    if (!originalObjective) return;
-
-    // 1. Recalculate progress and status for the initiative being saved
-    const finalInitiative = { ...updatedInitiative };
-    if (finalInitiative.status !== 'مسدود شده') {
-      const totalTasks = finalInitiative.tasks.length;
-      const completedTasks = finalInitiative.tasks.filter(t => t.completed).length;
-      
-      if (completedTasks === totalTasks && totalTasks > 0) finalInitiative.status = 'تکمیل شده';
-      else if (completedTasks > 0) finalInitiative.status = 'در حال انجام';
-      else finalInitiative.status = 'شروع نشده';
-    }
-
-    // 2. Create the new objectives array with updated KR progress
-    const newKeyResults = originalObjective.keyResults.map(kr => {
-      if (kr.id !== keyResultId) return kr;
-      
-      const initiativesForKr = kr.initiatives.map(init =>
-        init.id === finalInitiative.id ? finalInitiative : init
-      );
-
-      let avgKrProgress = 0;
-      if (initiativesForKr.length > 0) {
-        const totalInitiativeProgress = initiativesForKr.reduce((sum, init) => {
-          const iTotalTasks = init.tasks.length;
-          const iCompletedTasks = init.tasks.filter(t => t.completed).length;
-          const iProgress = iTotalTasks > 0 ? (iCompletedTasks / iTotalTasks) * 100 : 0;
-          return sum + iProgress;
-        }, 0);
-        avgKrProgress = totalInitiativeProgress / initiativesForKr.length;
-      }
-
-      return { ...kr, progress: Math.round(avgKrProgress), initiatives: initiativesForKr };
-    });
     
-    const updatedObjective = { ...originalObjective, keyResults: newKeyResults };
+    startTransition(async () => {
+      const { objectiveId, keyResultId } = editingInitiative;
+      const originalObjective = objectives.find(o => o.id === objectiveId);
+      if (!originalObjective) return;
 
-    // 3. Save the entire updated objective to the backend
-    try {
-        const objectiveToSave: ObjectiveFormData = {
-            ...updatedObjective,
-            teamId: String(updatedObjective.teamId), 
-            keyResults: updatedObjective.keyResults.map(kr => ({
-                ...kr,
-                initiatives: kr.initiatives.map(i => ({...i, tasks: i.tasks || []})),
-                assignees: kr.assignees || [], 
-            })),
-        };
-        const savedObjective = await saveObjective(objectiveToSave, objectiveId);
-        setObjectives(prev => prev.map(obj => obj.id === savedObjective.id ? savedObjective : obj));
-        toast({ title: "اقدام به‌روزرسانی شد" });
-    } catch(e) {
-        toast({ variant: 'destructive', title: "خطا در ذخیره اقدام" });
-    } finally {
-        handleCloseDialog();
-    }
-  }, [editingInitiative, objectives, toast]);
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+      const newKeyResults = originalObjective.keyResults.map(kr => {
+        if (kr.id !== keyResultId) return kr;
+        const initiativesForKr = kr.initiatives.map(init =>
+          init.id === updatedInitiative.id ? updatedInitiative : init
+        );
+        return { ...kr, initiatives: initiativesForKr };
+      });
+      
+      const objectiveToSave: ObjectiveFormData = { 
+        ...originalObjective,
+        keyResults: newKeyResults.map(kr => ({
+          ...kr,
+          initiatives: kr.initiatives.map(i => ({...i, tasks: i.tasks || []})),
+          risks: kr.risks || [],
+          assignees: kr.assignees || [], 
+        })),
+      };
+
+      try {
+          await saveObjective(objectiveToSave);
+          toast({ title: "اقدام به‌روزرسانی شد" });
+          handleCloseDialog();
+          await fetchData();
+      } catch(e) {
+          toast({ variant: 'destructive', title: "خطا در ذخیره اقدام" });
+      }
+    });
+
+  }, [editingInitiative, objectives, toast, fetchData]);
 
 
   if (isLoading || status === 'loading') {

@@ -1,37 +1,33 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
-import type { Objective, ObjectiveFormData, OkrCycle, OkrCycleFormData, Team } from '@/types/okr';
+import type { Objective, ObjectiveFormData, OkrCycle, OkrCycleFormData, Team, TeamWithMembership } from '@/types/okr';
 import { ObjectiveCard } from '@/components/okr/ObjectiveCard';
 import { EmptyState } from '@/components/okr/EmptyState';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
-<<<<<<< HEAD
-import { Plus, Settings2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { addObjective, getActiveOkrCycle, getObjectives, getOkrCycles, getTeams, setActiveOkrCycle, updateObjective } from '@/lib/actions';
-=======
 import { Plus, Settings2, Loader2 } from 'lucide-react';
-import { getObjectives, saveObjective, deleteObjective, getTeams, saveOkrCycle, getOkrCycle } from '@/lib/data/actions';
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+import { getObjectives, saveObjective, deleteObjective, getTeams, getOkrCycles, getActiveOkrCycle, setActiveOkrCycle } from '@/lib/data/actions';
 
 const ManageObjectiveDialog = dynamic(() => import('@/components/okr/ManageObjectiveDialog').then(mod => mod.ManageObjectiveDialog), {
-  loading: () => <p>در حال بارگذاری...</p>,
+  loading: () => <div className="p-4">در حال بارگذاری فرم...</div>,
 });
 const CheckInModal = dynamic(() => import('@/components/okr/CheckInModal').then(mod => mod.CheckInModal), {
-  loading: () => <p>در حال بارگذاری...</p>,
+  loading: () => <div className="p-4">در حال بارگذاری...</div>,
 });
 const ManageOkrCycleDialog = dynamic(() => import('@/components/okr/ManageOkrCycleDialog').then(mod => mod.ManageOkrCycleDialog), {
-  loading: () => <p>در حال بارگذاری...</p>,
+  loading: () => <div className="p-4">در حال بارگذاری...</div>,
 });
 
 export function ObjectivesClient() {
   const { data: session, status } = useSession();
+  const [isPending, startTransition] = useTransition();
+
   const [objectives, setObjectives] = useState<Objective[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState<TeamWithMembership[]>([]);
   const [isManageObjectiveDialogOpen, setIsManageObjectiveDialogOpen] = useState(false);
   const [editingObjective, setEditingObjective] = useState<Objective | null>(null);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
@@ -39,71 +35,39 @@ export function ObjectivesClient() {
   const [activeCycle, setActiveCycle] = useState<OkrCycle | null>(null);
   const [allCycles, setAllCycles] = useState<OkrCycle[]>([]);
   const [isManageCycleDialogOpen, setIsManageCycleDialogOpen] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const { toast } = useToast();
-<<<<<<< HEAD
-  const [isMounted, setIsMounted] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setIsMounted(false);
-    const [objectivesData, teamsData, cyclesData, activeCycleData] = await Promise.all([
-      getObjectives(),
-      getTeams(),
-      getOkrCycles(),
-      getActiveOkrCycle(),
-    ]);
-
-    setObjectives(objectivesData);
-    setTeams(teamsData);
-    setAllCycles(cyclesData);
-    if(activeCycleData) {
-        setActiveCycle({
-            ...activeCycleData,
-            startDate: new Date(activeCycleData.startDate),
-            endDate: new Date(activeCycleData.endDate),
-        });
+    setIsLoadingData(true);
+    try {
+        const [objectivesData, teamsData, cyclesData, activeCycleData] = await Promise.all([
+            getObjectives(),
+            getTeams(),
+            getOkrCycles(),
+            getActiveOkrCycle(),
+        ]);
+        setObjectives(objectivesData);
+        setTeams(teamsData);
+        setAllCycles(cyclesData);
+        setActiveCycle(activeCycleData);
+    } catch (error) {
+        console.error("Failed to fetch data:", error);
+        toast({ variant: 'destructive', title: 'خطا در بارگذاری داده‌ها' });
+    } finally {
+        setIsLoadingData(false);
     }
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-=======
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  }, [toast]);
 
   useEffect(() => {
     if (status === 'authenticated') {
-      const loadData = async () => {
-        setIsLoadingData(true);
-        try {
-          const [objectivesData, teamsData, cycleData] = await Promise.all([
-            getObjectives(),
-            getTeams(),
-            getOkrCycle(),
-          ]);
-          setObjectives(objectivesData);
-          setTeams(teamsData);
-          if (cycleData) {
-            setOkrCycle({
-                startDate: new Date(cycleData.startDate),
-                endDate: new Date(cycleData.endDate),
-            });
-          }
-        } catch (error) {
-          toast({ variant: 'destructive', title: 'خطا در بارگذاری داده‌ها' });
-          console.error(error);
-        } finally {
-          setIsLoadingData(false);
-        }
-      };
-      loadData();
+      fetchData();
     }
      if (status === 'unauthenticated') {
       setIsLoadingData(false);
     }
-  }, [status, toast]);
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+  }, [status, fetchData]);
+
 
   const handleAddObjectiveClick = () => {
     if (!activeCycle) {
@@ -124,30 +88,18 @@ export function ObjectivesClient() {
   };
 
   const handleManageObjectiveSubmit = async (data: ObjectiveFormData) => {
-<<<<<<< HEAD
-    if (editingObjective || data.id) { 
-      await updateObjective(data as Objective);
-      toast({ title: "هدف به‌روزرسانی شد", description: `هدف «${data.description}» با موفقیت به‌روزرسانی شد.` });
-    } else { 
-      await addObjective(data);
-      toast({ title: "هدف اضافه شد", description: `هدف «${data.description}» با موفقیت اضافه شد.` });
-=======
-    try {
-      const savedObjective = await saveObjective(data, editingObjective?.id);
-      if (editingObjective) {
-        setObjectives(prev => prev.map(obj => obj.id === savedObjective.id ? savedObjective : obj));
-        toast({ title: "هدف به‌روزرسانی شد" });
-      } else {
-        setObjectives(prev => [...prev, savedObjective]);
-        toast({ title: "هدف اضافه شد" });
+    startTransition(async () => {
+      try {
+        await saveObjective(data);
+        toast({ title: data.id ? "هدف به‌روزرسانی شد" : "هدف اضافه شد" });
+        setIsManageObjectiveDialogOpen(false);
+        setEditingObjective(null);
+        await fetchData(); // Refresh data
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'خطا در ذخیره هدف' });
+        console.error("Save objective error:", error);
       }
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'خطا در ذخیره هدف' });
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
-    }
-    setEditingObjective(null);
-    setIsManageObjectiveDialogOpen(false);
-    fetchData(); // Refresh data
+    });
   };
   
   const handleOpenCheckInModal = (objective: Objective) => {
@@ -155,43 +107,33 @@ export function ObjectivesClient() {
     setIsCheckInModalOpen(true);
   };
 
-<<<<<<< HEAD
-  const handleUpdateObjectiveAfterCheckIn = async (updatedObjective: Objective) => {
-     await updateObjective(updatedObjective);
-     fetchData(); // Refresh data
-  };
-
-  const handleManageCycleSubmit = async (data: OkrCycleFormData) => {
-    if(data.activeCycleId) {
-        await setActiveOkrCycle(data.activeCycleId);
-        fetchData(); // Refresh data to get new active cycle and filtered objectives
-    }
-=======
   const handleUpdateObjectiveAfterCheckIn = async (updatedObjectiveData: ObjectiveFormData) => {
-     try {
-        const savedObjective = await saveObjective(updatedObjectiveData, updatedObjectiveData.id);
-        setObjectives(prev => prev.map(obj => obj.id === savedObjective.id ? savedObjective : obj));
-     } catch (error) {
+     startTransition(async () => {
+      try {
+        await saveObjective(updatedObjectiveData);
+        toast({ title: "ثبت پیشرفت ذخیره شد" });
+        setIsCheckInModalOpen(false);
+        await fetchData(); // Refresh data
+      } catch (error) {
         toast({ variant: 'destructive', title: 'خطا در به‌روزرسانی هدف' });
-     }
+      }
+    });
   };
 
   const handleManageCycleSubmit = async (data: OkrCycleFormData) => {
-     try {
-        await saveOkrCycle(data);
-        setOkrCycle({ startDate: data.startDate, endDate: data.endDate });
-        toast({ title: "چرخه OKR به‌روزرسانی شد" });
-     } catch (error) {
+    startTransition(async () => {
+      try {
+        await setActiveOkrCycle(data.activeCycleId);
+        toast({ title: "چرخه فعال OKR به‌روزرسانی شد" });
+        setIsManageCycleDialogOpen(false);
+        await fetchData();
+      } catch (error) {
         toast({ variant: 'destructive', title: 'خطا در ذخیره چرخه' });
-     }
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+      }
+    });
   };
   
   const teamsMap = new Map(teams.map(team => [team.id, team.name]));
-  
-  const filteredObjectives = activeCycle 
-    ? objectives.filter(obj => obj.cycleId === activeCycle.id)
-    : [];
 
   if (status === 'loading' || isLoadingData) {
     return (
@@ -214,7 +156,8 @@ export function ObjectivesClient() {
             <Settings2 className="w-4 h-4 ml-2" />
             تنظیم چرخه OKR
           </Button>
-          <Button onClick={handleAddObjectiveClick} className="bg-primary hover:bg-primary/90" disabled={teams.length === 0 || !activeCycle}>
+          <Button onClick={handleAddObjectiveClick} className="bg-primary hover:bg-primary/90" disabled={teams.length === 0 || !activeCycle || isPending}>
+            {isPending && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
             <Plus className="w-4 h-4 ml-2" />
             افزودن هدف
           </Button>
@@ -231,19 +174,15 @@ export function ObjectivesClient() {
           <h3 className="text-xl font-semibold text-blue-800">یک چرخه OKR انتخاب کنید</h3>
           <p className="text-blue-700 mt-2">برای مشاهده و افزودن اهداف، لطفاً یک چرخه فعال را از طریق دکمه «تنظیم چرخه OKR» انتخاب کنید.</p>
         </div>
-      ) : filteredObjectives.length === 0 ? (
+      ) : objectives.length === 0 ? (
         <EmptyState onAddObjective={handleAddObjectiveClick} />
       ) : (
         <div className="space-y-8 mt-6">
-          {filteredObjectives.map(obj => (
+          {objectives.map(obj => (
             <ObjectiveCard
               key={obj.id}
               objective={obj}
-<<<<<<< HEAD
-              teamName={obj.teamId ? teamsMap.get(obj.teamId) : undefined}
-=======
-              team={obj.teamId ? teamsMap.get(parseInt(obj.teamId)) : undefined}
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
+              teamName={teamsMap.get(obj.teamId)}
               onEdit={handleEditObjective}
               onCheckIn={handleOpenCheckInModal}
             />
@@ -258,6 +197,7 @@ export function ObjectivesClient() {
         initialData={editingObjective}
         teams={teams}
         cycleId={activeCycle.id}
+        isSubmitting={isPending}
       />}
 
       {isCheckInModalOpen && currentObjectiveForCheckIn && (
@@ -266,6 +206,7 @@ export function ObjectivesClient() {
           onClose={() => setIsCheckInModalOpen(false)}
           objective={currentObjectiveForCheckIn}
           onUpdateObjective={handleUpdateObjectiveAfterCheckIn}
+          isSubmitting={isPending}
         />
       )}
 
@@ -275,6 +216,7 @@ export function ObjectivesClient() {
         onSubmit={handleManageCycleSubmit}
         initialData={activeCycle}
         okrCycles={allCycles}
+        isSubmitting={isPending}
       />}
     </>
   );

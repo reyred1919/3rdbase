@@ -28,7 +28,9 @@ export async function POST(req: Request) {
     // Create the new user
     await db.insert(users).values({
       username: username,
-      password: hashedPassword,
+      hashedPassword: hashedPassword,
+      name: username,
+      email: `${username}@example.com`,
     });
 
     return NextResponse.json({ message: 'کاربر با موفقیت ایجاد شد.' }, { status: 201 });

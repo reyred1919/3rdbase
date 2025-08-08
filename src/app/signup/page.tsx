@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Target, UserPlus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { registerUser } from '@/lib/auth-actions';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -34,9 +33,15 @@ export default function SignupPage() {
     }
 
     try {
-      const result = await registerUser({ username, password });
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
 
-      if (result.success) {
+      const data = await response.json();
+
+      if (response.ok) {
         toast({
           title: "ثبت‌نام موفق",
           description: "حساب کاربری شما با موفقیت ایجاد شد. اکنون می‌توانید وارد شوید.",
@@ -46,7 +51,7 @@ export default function SignupPage() {
         toast({
           variant: "destructive",
           title: "خطا در ثبت‌نام",
-          description: result.message || "مشکلی پیش آمده است. لطفاً دوباره تلاش کنید.",
+          description: data.message || "مشکلی پیش آمده است. لطفاً دوباره تلاش کنید.",
         });
       }
     } catch (error) {

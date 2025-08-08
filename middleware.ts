@@ -1,13 +1,9 @@
 
-import { auth } from './auth';
-import { NextResponse } from 'next/server';
+import NextAuth from 'next-auth';
+import { authConfig } from '@/lib/auth.config';
 
-export default auth((req) => {
-  if (!req.auth) {
-    const url = req.url.replace(req.nextUrl.pathname, '/login');
-    return NextResponse.redirect(url);
-  }
-});
+// The middleware is now initialized using the Edge-compatible authConfig.
+export default NextAuth(authConfig).auth;
 
 export const config = {
   // Matches all routes except for the ones starting with:

@@ -1,25 +1,12 @@
 
-import NextAuth from 'next-auth';
-import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db } from '@/lib/db';
-import type { Adapter } from 'next-auth/adapters';
+import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { users } from './drizzle/schema';
+import { users } from '../../drizzle/schema';
+import { db } from './db';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
-// This is the main auth file, used by the API routes and middleware.
-export const { 
-  handlers: { GET, POST }, 
-  auth, 
-  signIn, 
-  signOut 
-} = NextAuth({
-  adapter: DrizzleAdapter(db) as Adapter,
-  session: { strategy: 'jwt' },
-  pages: {
-    signIn: '/login',
-  },
+export const authConfig = {
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -54,6 +41,9 @@ export const {
       },
     }),
   ],
+  pages: {
+    signIn: '/login',
+  },
    callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
@@ -82,5 +72,6 @@ export const {
         }
         return session;
     },
-  }
-});
+  },
+  // The adapter must be removed from the edge-compatible config
+} satisfies NextAuthConfig;

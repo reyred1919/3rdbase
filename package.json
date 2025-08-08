@@ -11,12 +11,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-<<<<<<< HEAD
-    "postinstall": "patch-package"
-=======
+    "postinstall": "patch-package",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",
@@ -48,22 +45,14 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
-<<<<<<< HEAD
-    "drizzle-orm": "^0.30.10",
-=======
     "drizzle-orm": "^0.32.1",
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
     "firebase": "^11.8.1",
     "genkit": "^1.8.0",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "next-auth": "^4.24.7",
     "patch-package": "^8.0.0",
-<<<<<<< HEAD
-    "postgres": "^3.4.4",
-=======
     "pg": "^8.12.0",
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -79,11 +68,7 @@
     "@types/pg": "^8.11.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-<<<<<<< HEAD
-    "drizzle-kit": "^0.21.4",
-=======
     "drizzle-kit": "^0.23.0",
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
     "genkit-cli": "^1.8.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",

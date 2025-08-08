@@ -66,16 +66,11 @@ export async function getObjectives(): Promise<Objective[]> {
     return Promise.resolve([]);
 }
 
-export async function addObjective(data: ObjectiveFormData) {
-    console.log("TODO: Implement DB call for addObjective", data);
-    // This would add a new objective and its related entities to the database.
+export async function saveObjective(data: ObjectiveFormData) {
+    console.log("TODO: Implement DB call for saveObjective", data);
+    // This would add or update an objective and its related entities to the database.
     revalidatePath('/objectives');
-}
-
-export async function updateObjective(data: Objective) {
-    console.log("TODO: Implement DB call for updateObjective", data);
-    // This would update an existing objective in the database.
-    revalidatePath('/objectives');
+    revalidatePath('/dashboard');
     revalidatePath('/tasks');
 }
 

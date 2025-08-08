@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, RISK_STATUSES, MEETING_FREQUENCIES, PERSIAN_WEEK_DAYS } from './constants';
 import { roleEnum } from '../../drizzle/schema';
+import { addDays, startOfDay } from 'date-fns';
 
 // Base ID schema for reusability
 const idSchema = z.union([z.string(), z.number()]).optional();
@@ -73,10 +74,22 @@ export const checkInFormSchema = z.object({
 });
 export type CheckInFormData = z.infer<typeof checkInFormSchema>;
 
-export const okrCycleFormSchema = z.object({
+
+export const newOkrCycleFormSchema = z.object({
+  name: z.string().min(3, { message: "نام چرخه باید حداقل ۳ کاراکتر باشد." }),
+  startDate: z.date({ required_error: "تاریخ شروع الزامی است." }),
+  endDate: z.date({ required_error: "تاریخ پایان الزامی است." }),
+}).refine(data => data.endDate > data.startDate, {
+  message: "تاریخ پایان باید بعد از تاریخ شروع باشد.",
+  path: ["endDate"],
+});
+export type OkrCycleFormData = z.infer<typeof newOkrCycleFormSchema>;
+
+
+export const setActiveOkrCycleFormSchema = z.object({
     activeCycleId: z.coerce.number({ required_error: "انتخاب چرخه الزامی است." }),
 });
-export type OkrCycleFormData = z.infer<typeof okrCycleFormSchema>;
+export type SetActiveOkrCycleFormData = z.infer<typeof setActiveOkrCycleFormSchema>;
 
 
 const meetingFrequencyValues = MEETING_FREQUENCIES.map(f => f.value) as [string, ...string[]];

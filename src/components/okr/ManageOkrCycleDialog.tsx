@@ -1,4 +1,6 @@
 
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,15 +16,15 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import type { OkrCycle } from '@/types/okr';
-import { okrCycleFormSchema, type OkrCycleFormData } from '@/lib/schemas';
+import type { OkrCycle, SetActiveOkrCycleFormData } from '@/types/okr';
+import { setActiveOkrCycleFormSchema } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react';
 
 interface ManageOkrCycleDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: OkrCycleFormData) => void;
+  onSubmit: (data: SetActiveOkrCycleFormData) => void;
   initialData?: OkrCycle | null;
   okrCycles: OkrCycle[];
   isSubmitting: boolean;
@@ -30,8 +32,8 @@ interface ManageOkrCycleDialogProps {
 
 export function ManageOkrCycleDialog({ isOpen, onClose, onSubmit, initialData, okrCycles, isSubmitting }: ManageOkrCycleDialogProps) {
   
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<OkrCycleFormData>({
-    resolver: zodResolver(okrCycleFormSchema),
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<SetActiveOkrCycleFormData>({
+    resolver: zodResolver(setActiveOkrCycleFormSchema),
   });
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export function ManageOkrCycleDialog({ isOpen, onClose, onSubmit, initialData, o
     }
   }, [isOpen, initialData, reset]);
 
-  const processSubmit = async (data: OkrCycleFormData) => {
+  const processSubmit = async (data: SetActiveOkrCycleFormData) => {
     onSubmit(data);
   };
 
@@ -64,7 +66,7 @@ export function ManageOkrCycleDialog({ isOpen, onClose, onSubmit, initialData, o
                   render={({ field }) => (
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={String(field.value)}
+                      value={field.value !== undefined ? String(field.value) : undefined}
                       className="grid grid-cols-1 gap-2"
                     >
                       {okrCycles.map((cycle) => (

@@ -1,6 +1,6 @@
 
 import type { z } from 'zod';
-import type { objectiveFormSchema, teamSchema, memberSchema, initiativeSchema, taskSchema, okrCycleFormSchema, calendarSettingsSchema, riskSchema } from '@/lib/schemas';
+import type { objectiveFormSchema, teamSchema, memberSchema, initiativeSchema, taskSchema, newOkrCycleFormSchema, calendarSettingsSchema, riskSchema, setActiveOkrCycleFormSchema } from '@/lib/schemas';
 import { roleEnum } from '../../drizzle/schema';
 import type { ConfidenceLevel, InitiativeStatus, RiskStatus } from './constants';
 
@@ -80,7 +80,9 @@ export interface OkrCycle {
   endDate: Date;
 }
 
-export type OkrCycleFormData = z.infer<typeof okrCycleFormSchema>;
+export type OkrCycleFormData = z.infer<typeof newOkrCycleFormSchema>;
+export type SetActiveOkrCycleFormData = z.infer<typeof setActiveOkrCycleFormSchema>;
+
 
 export interface CalendarSettings {
   frequency: 'weekly' | 'bi-weekly' | 'monthly';

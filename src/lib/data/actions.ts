@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import * as schema from '../../../drizzle/schema';
 import { auth } from '@/lib/auth';
 import { eq, and, inArray, sql, desc } from 'drizzle-orm';
-import type { Objective, Team, OkrCycle, ObjectiveFormData, TeamFormData, CalendarSettings, CalendarSettingsFormData, TeamWithMembership, Member, KeyResult } from '@/types/okr';
+import type { Objective, Team, OkrCycle, ObjectiveFormData, TeamFormData, CalendarSettings, CalendarSettingsFormData, TeamWithMembership, Member, KeyResult, OkrCycleFormData } from '@/types/okr';
 import { revalidatePath } from 'next/cache';
 import { ZodError } from 'zod';
 
@@ -318,6 +318,34 @@ export async function getOkrCycles(): Promise<OkrCycle[]> {
         orderBy: desc(schema.okrCycles.startDate)
     });
 }
+
+export async function createOkrCycle(data: OkrCycleFormData) {
+    const userId = await getUserIdOrThrow();
+    await db.insert(schema.okrCycles).values({ ...data, ownerId: userId });
+    revalidatePath('/cycles');
+}
+
+export async function updateOkrCycle(data: OkrCycle) {
+    await db.update(schema.okrCycles)
+        .set({ name: data.name, startDate: data.startDate, endDate: data.endDate })
+        .where(eq(schema.okrCycles.id, data.id));
+    revalidatePath('/cycles');
+}
+
+export async function deleteOkrCycle(cycleId: number) {
+    // Optional: Check if cycle is linked to objectives before deleting
+    const linkedObjectives = await db.query.objectives.findFirst({
+        where: eq(schema.objectives.cycleId, cycleId)
+    });
+
+    if (linkedObjectives) {
+        throw new Error("Cannot delete cycle with active objectives.");
+    }
+    
+    await db.delete(schema.okrCycles).where(eq(schema.okrCycles.id, cycleId));
+    revalidatePath('/cycles');
+}
+
 
 export async function getActiveOkrCycle(): Promise<OkrCycle | null> {
     const userId = await getUserIdOrThrow();

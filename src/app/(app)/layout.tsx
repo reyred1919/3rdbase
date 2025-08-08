@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { Target, LayoutDashboard, ListChecks, CalendarDays, History, Users } from 'lucide-react';
+import { Target, LayoutDashboard, ListChecks, CalendarDays, History, Users, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 
 interface AppLayoutProps {
@@ -30,6 +30,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   const menuItems = [
     { href: '/dashboard', label: 'داشبورد', icon: LayoutDashboard },
     { href: '/objectives', label: 'مدیریت اهداف', icon: Target },
+    { href: '/cycles', label: 'مدیریت چرخه‌ها', icon: RefreshCw },
     { href: '/teams', label: 'مدیریت تیم‌ها', icon: Users },
     { href: '/tasks', label: 'مدیریت وظیفه‌ها', icon: ListChecks },
     { href: '/calendar', label: 'تقویم', icon: CalendarDays },
@@ -51,12 +52,8 @@ function AppLayoutContent({ children }: AppLayoutProps) {
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
-<<<<<<< HEAD
                     as="a"
-                    isActive={pathname === item.href}
-=======
                     isActive={pathname.startsWith(item.href)}
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
                     tooltip={{ children: item.label, side: 'left', className: 'font-body' }}
                   >
                     <item.icon className="h-5 w-5" />

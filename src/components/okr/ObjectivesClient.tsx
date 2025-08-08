@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
-import type { Objective, ObjectiveFormData, OkrCycle, OkrCycleFormData, Team, TeamWithMembership } from '@/types/okr';
+import type { Objective, ObjectiveFormData, OkrCycle, SetActiveOkrCycleFormData, TeamWithMembership } from '@/types/okr';
 import { ObjectiveCard } from '@/components/okr/ObjectiveCard';
 import { EmptyState } from '@/components/okr/EmptyState';
 import { useToast } from "@/hooks/use-toast";
@@ -120,7 +120,7 @@ export function ObjectivesClient() {
     });
   };
 
-  const handleManageCycleSubmit = async (data: OkrCycleFormData) => {
+  const handleManageCycleSubmit = async (data: SetActiveOkrCycleFormData) => {
     startTransition(async () => {
       try {
         await setActiveOkrCycle(data.activeCycleId);

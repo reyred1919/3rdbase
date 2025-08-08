@@ -18,14 +18,18 @@ export const {
   session: { strategy: 'jwt' },
   callbacks: {
     // We keep the full callbacks here for the server-side session management
-    authorized: authConfig.callbacks.authorized, // Keep the authorized callback
+    authorized: authConfig.callbacks.authorized, // Re-use the authorized callback
+    
+    // Extend callbacks for JWT and session
     jwt({ token, user }) {
         if (user) {
+            // On sign-in, attach the user's ID to the token
             token.id = user.id;
         }
         return token;
     },
     session({ session, token }) {
+        // Attach the user's ID from the token to the session object
         if (session.user && token.id) {
             session.user.id = token.id as string;
         }

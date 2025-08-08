@@ -3,73 +3,22 @@ import NextAuth from 'next-auth';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from '@/lib/db';
 import type { Adapter } from 'next-auth/adapters';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { users } from './drizzle/schema';
-import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import { authConfig } from './auth.config'; // Importing the base config
 
-// This is the main auth file, used by the API routes and middleware.
+// This is the main auth file, used by the API routes and server-side logic.
+// It extends the base config with the database adapter and session strategy.
 export const { 
   handlers: { GET, POST }, 
   auth, 
   signIn, 
   signOut 
 } = NextAuth({
+  ...authConfig, // Spread the base config
   adapter: DrizzleAdapter(db) as Adapter,
   session: { strategy: 'jwt' },
-  pages: {
-    signIn: '/login',
-  },
-  providers: [
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        username: { label: 'Username', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
-          return null;
-        }
-
-        const user = await db.query.users.findFirst({
-            where: eq(users.username, credentials.username as string),
-        });
-
-        if (!user || !user.hashedPassword) {
-          return null;
-        }
-
-        const isPasswordCorrect = await bcrypt.compare(credentials.password as string, user.hashedPassword);
-
-        if (isPasswordCorrect) {
-          return {
-            id: user.id,
-            name: user.username,
-            email: user.email,
-          };
-        }
-
-        return null;
-      },
-    }),
-  ],
-   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnDashboard = nextUrl.pathname.startsWith('/dashboard');
-      if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false; // Redirect unauthenticated users to login page
-      } else if (isLoggedIn) {
-        // If the user is logged in and tries to access login/signup, redirect to dashboard
-        if (nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup')) {
-            return Response.redirect(new URL('/dashboard', nextUrl));
-        }
-        return true;
-      }
-      return true;
-    },
+  callbacks: {
+    // We keep the full callbacks here for the server-side session management
+    authorized: authConfig.callbacks.authorized, // Keep the authorized callback
     jwt({ token, user }) {
         if (user) {
             token.id = user.id;

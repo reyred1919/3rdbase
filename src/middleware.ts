@@ -1,5 +1,6 @@
+
 import NextAuth from 'next-auth';
-import { authConfig } from '@/lib/auth.config';
+import { authConfig } from '../auth.config';
 
 // The middleware is now initialized using the Edge-compatible authConfig.
 export default NextAuth(authConfig).auth;

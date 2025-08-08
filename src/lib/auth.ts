@@ -48,7 +48,7 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.sub as string;
         session.user.name = token.name;
         session.user.email = token.email;
@@ -66,12 +66,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
-    // signOut: '/auth/signout',
-    // error: '/auth/error', // Error code passed in query string as ?error=
-    // verifyRequest: '/auth/verify-request', // (e.g. for e-mail with magic link)
-    // newUser: '/auth/new-user' // New users will be directed here on first sign in
   },
   secret: process.env.AUTH_SECRET,
 };
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);

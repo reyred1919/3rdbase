@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 import type { KeyResult, Risk } from '@/types/okr';
-=======
-
-import type { KeyResult } from '@/types/okr';
->>>>>>> 800eae5690277b2cebf730d06dc49029ba9a5719
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -35,12 +30,12 @@ const riskStatusStyles: Record<RiskStatus, string> = {
 function RiskDisplay({ risk }: { risk: Risk }) {
   const badgeClass = riskStatusStyles[risk.status] || riskStatusStyles['فعال'];
   return (
-    <div className="flex flex-col gap-2 p-2.5 bg-background rounded-md border">
+    <div className="flex flex-col gap-2 p-2.5 bg-red-500/5 rounded-md border border-destructive/20">
         <div className="flex items-center justify-between">
             <p className="text-sm text-foreground font-medium">{risk.description}</p>
             <Badge variant="outline" className={cn("text-xs font-medium px-2 py-0.5", badgeClass)}>{risk.status}</Badge>
         </div>
-        <p className="text-sm text-muted-foreground pl-5 border-r-2 border-primary/50 pr-2">
+        <p className="text-sm text-muted-foreground pl-5 border-r-2 border-destructive/50 pr-2">
             <span className="font-semibold text-foreground">اقدام اصلاحی:</span> {risk.correctiveAction}
         </p>
     </div>

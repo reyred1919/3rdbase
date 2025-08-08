@@ -43,6 +43,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { getTeams, addTeam, updateTeam, deleteTeam } from '@/lib/data/actions';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 function ManageTeamDialog({
   isOpen,
@@ -76,9 +77,13 @@ function ManageTeamDialog({
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        reset({ name: initialData.name, members: initialData.members });
+        reset({ 
+          id: initialData.id,
+          name: initialData.name, 
+          members: initialData.members.map(m => ({...m, id: m.id.toString()})) // Ensure id is string for form
+        });
       } else {
-        reset({ name: '', members: [] });
+        reset({ name: '', members: [{ name: '', avatarUrl: '' }] });
       }
     }
   }, [isOpen, initialData, reset]);
@@ -97,47 +102,51 @@ function ManageTeamDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="team-name">نام تیم</Label>
-              <Input id="team-name" {...register('name')} className="mt-1" />
-              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
-            </div>
-
-            <div>
-              <Label>اعضای تیم</Label>
-              <div className="space-y-2 mt-2">
-                {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-center gap-2">
-                    <Input
-                      {...register(`members.${index}.name`)}
-                      placeholder={`نام عضو #${index + 1}`}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive h-9 w-9"
-                      onClick={() => remove(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+          <ScrollArea className="max-h-[calc(70vh-150px)]">
+            <div className="space-y-4 py-4 pr-4 pl-2">
+              <div>
+                <Label htmlFor="team-name">نام تیم</Label>
+                <Input id="team-name" {...register('name')} className="mt-1" />
+                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name.message}</p>}
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => append({ name: '', avatarUrl: '' })}
-              >
-                <Plus className="h-4 w-4 ml-2" />
-                افزودن عضو
-              </Button>
+
+              <div>
+                <Label>اعضای تیم</Label>
+                <div className="space-y-2 mt-2">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <Input
+                        {...register(`members.${index}.name`)}
+                        placeholder={`نام عضو #${index + 1}`}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive h-9 w-9"
+                        onClick={() => remove(index)}
+                        disabled={fields.length <= 1 && !initialData}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {errors.members && <p className="text-sm text-destructive mt-1">{errors.members.message}</p>}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => append({ name: '', avatarUrl: '' })}
+                >
+                  <Plus className="h-4 w-4 ml-2" />
+                  افزودن عضو
+                </Button>
+              </div>
             </div>
-          </div>
-          <DialogFooter>
+          </ScrollArea>
+          <DialogFooter className="pt-4 mt-4 border-t">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={isSubmitting}>لغو</Button>
             </DialogClose>
@@ -245,18 +254,13 @@ export function TeamsClient() {
   };
 
   const handleSaveTeam = async (teamData: TeamFormData) => {
-     if (!session?.user?.id) {
-        toast({ title: "خطا", description: "برای ساخت یا ویرایش تیم باید وارد شوید.", variant: 'destructive' });
-        return;
-      }
-    
     startTransition(async () => {
        try {
-        if (editingTeam) {
-          await updateTeam({ ...editingTeam, ...teamData });
+        if (teamData.id) {
+          await updateTeam({ id: teamData.id, ...teamData });
           toast({ title: "تیم به‌روزرسانی شد" });
         } else {
-          await addTeam({ name: teamData.name }, session.user.id);
+          await addTeam(teamData);
           toast({ title: "تیم جدید ساخته شد" });
         }
         setIsManageTeamDialogOpen(false);
@@ -281,7 +285,8 @@ export function TeamsClient() {
     <>
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h2 className="text-2xl font-semibold font-headline text-foreground">مدیریت تیم‌ها</h2>
-        <Button onClick={handleAddTeam}>
+        <Button onClick={handleAddTeam} disabled={isPending}>
+          {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           <Plus className="h-4 w-4 ml-2" /> ایجاد تیم جدید
         </Button>
       </div>
@@ -376,4 +381,3 @@ export function TeamsClient() {
     </>
   );
 }
-

@@ -2,7 +2,7 @@
 import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as schema from '../src/lib/db/schema';
+import * as schema from './schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
@@ -34,14 +34,16 @@ const main = async () => {
     if (!user) {
       console.log(`- Seed user "${SEED_USER_USERNAME}" not found. Creating it...`);
       const hashedPassword = await bcrypt.hash(SEED_USER_PASSWORD, 10);
-      const newUser = await db
+      const [newUser] = await db
         .insert(schema.users)
         .values({
           username: SEED_USER_USERNAME,
-          password: hashedPassword,
+          hashedPassword: hashedPassword,
+          name: SEED_USER_USERNAME,
+          email: `${SEED_USER_USERNAME}@example.com`
         })
         .returning();
-      user = newUser[0];
+      user = newUser;
       console.log(`- User "${SEED_USER_USERNAME}" created successfully.`);
     } else {
         console.log(`- Seed user "${SEED_USER_USERNAME}" already exists. Skipping creation.`);
@@ -51,7 +53,7 @@ const main = async () => {
 
     // We check if the user already has teams to avoid re-seeding duplicates.
     const existingTeams = await db.query.teams.findMany({
-      where: eq(schema.teams.userId, user.id),
+      where: eq(schema.teams.ownerId, user.id),
       limit: 1,
     });
 
@@ -83,8 +85,15 @@ const main = async () => {
         console.log(`- Creating team: "${teamData.name}"`);
         const [newTeam] = await tx
           .insert(schema.teams)
-          .values({ name: teamData.name, userId: user!.id })
+          .values({ name: teamData.name, ownerId: user!.id })
           .returning();
+        
+        // Add the owner as an admin member of the team
+        await tx.insert(schema.teamMemberships).values({
+            userId: user!.id,
+            teamId: newTeam.id,
+            role: 'admin',
+        });
 
         if (teamData.members.length > 0) {
           console.log(`  - Adding ${teamData.members.length} members...`);

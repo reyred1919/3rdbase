@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
-import type { Objective, Initiative, Task, ObjectiveFormData } from '@/types/okr';
+import type { Objective, Initiative, Task, ObjectiveFormData, InitiativeFormData } from '@/types/okr';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const ManageInitiativeDialog = dynamic(() => import('@/components/tasks/ManageInitiativeDialog').then(mod => mod.ManageInitiativeDialog), {
   loading: () => <p>در حال بارگذاری...</p>,
+  ssr: false,
 });
 
 const statusStyles: Record<InitiativeStatus, string> = {
@@ -94,43 +95,44 @@ export function TasksView() {
     setIsManageInitiativeDialogOpen(false);
   };
 
-  const handleSaveInitiative = useCallback(async (updatedInitiative: Initiative) => {
+  const handleSaveInitiative = useCallback(async (updatedInitiativeData: InitiativeFormData) => {
     if (!editingInitiative) return;
-    
+
     startTransition(async () => {
-      const { objectiveId, keyResultId } = editingInitiative;
-      const originalObjective = objectives.find(o => o.id === objectiveId);
-      if (!originalObjective) return;
+        const { objectiveId, keyResultId } = editingInitiative;
+        const originalObjective = objectives.find(o => o.id === objectiveId);
+        if (!originalObjective) return;
 
-      const newKeyResults = originalObjective.keyResults.map(kr => {
-        if (kr.id !== keyResultId) return kr;
-        const initiativesForKr = kr.initiatives.map(init =>
-          init.id === updatedInitiative.id ? updatedInitiative : init
-        );
-        return { ...kr, initiatives: initiativesForKr };
-      });
-      
-      const objectiveToSave: ObjectiveFormData = { 
-        ...originalObjective,
-        keyResults: newKeyResults.map(kr => ({
-          ...kr,
-          initiatives: kr.initiatives.map(i => ({...i, tasks: i.tasks || []})),
-          risks: kr.risks || [],
-          assignees: kr.assignees || [], 
-        })),
-      };
+        // Reconstruct the entire objective with the updated initiative
+        const objectiveToSave: ObjectiveFormData = {
+            ...originalObjective,
+            keyResults: originalObjective.keyResults.map(kr => {
+                if (kr.id !== keyResultId) {
+                    return { ...kr, assignees: kr.assignees || [], risks: kr.risks || [], initiatives: kr.initiatives.map(i => ({...i, tasks: i.tasks || []})) };
+                }
 
-      try {
-          await saveObjective(objectiveToSave);
-          toast({ title: "اقدام به‌روزرسانی شد" });
-          handleCloseDialog();
-          await fetchData();
-      } catch(e) {
-          toast({ variant: 'destructive', title: "خطا در ذخیره اقدام" });
-      }
+                return {
+                    ...kr,
+                    assignees: kr.assignees || [],
+                    risks: kr.risks || [],
+                    initiatives: kr.initiatives.map(init =>
+                        init.id === updatedInitiativeData.id ? { ...init, ...updatedInitiativeData } : {...init, tasks: init.tasks || []}
+                    ),
+                };
+            }),
+        };
+
+        try {
+            await saveObjective(objectiveToSave);
+            toast({ title: "اقدام به‌روزرسانی شد" });
+            handleCloseDialog();
+            await fetchData(); // This reloads all data, ensuring consistency
+        } catch (e) {
+            toast({ variant: 'destructive', title: "خطا در ذخیره اقدام" });
+            console.error("Save initiative error:", e);
+        }
     });
-
-  }, [editingInitiative, objectives, toast, fetchData]);
+}, [editingInitiative, objectives, toast, fetchData]);
 
 
   if (isLoading || status === 'loading') {
@@ -207,8 +209,8 @@ export function TasksView() {
                   <Badge variant="outline" className={`text-xs font-medium px-2 py-1 ${badgeClass}`}>
                     {model.initiative.status}
                   </Badge>
-                  <Button size="sm" variant="outline" onClick={() => handleManageClick(model)}>
-                    <Settings className="w-4 h-4 ml-2" />
+                  <Button size="sm" variant="outline" onClick={() => handleManageClick(model)} disabled={isPending}>
+                    {isPending && editingInitiative?.initiative.id === model.initiative.id ? <Loader2 className="w-4 h-4 ml-2 animate-spin"/> : <Settings className="w-4 h-4 ml-2" />}
                     مدیریت
                   </Button>
                 </CardFooter>
@@ -224,6 +226,7 @@ export function TasksView() {
           onClose={handleCloseDialog}
           initiative={editingInitiative.initiative}
           onSave={handleSaveInitiative}
+          isSubmitting={isPending}
         />
       )}
     </>

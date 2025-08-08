@@ -2,13 +2,12 @@
 import { z } from 'zod';
 import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, RISK_STATUSES, MEETING_FREQUENCIES, PERSIAN_WEEK_DAYS } from './constants';
 import { roleEnum } from '../../drizzle/schema';
-import { addDays, startOfDay } from 'date-fns';
 
 // Base ID schema for reusability
 const idSchema = z.union([z.string(), z.number()]).optional();
 
 export const memberSchema = z.object({
-  id: z.number().int(),
+  id: z.union([z.string(), z.number()]), // ID can be string from form, will be number in DB
   name: z.string().min(1, "نام عضو الزامی است.").max(100, "نام عضو بیش از حد طولانی است."),
   avatarUrl: z.string().url("آدرس آواتار نامعتبر است.").optional().nullable(),
 });
@@ -17,6 +16,7 @@ export const teamSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "نام تیم الزامی است.").max(100, "نام تیم بیش از حد طولانی است."),
   members: z.array(z.object({ // Simplified for form usage
+      id: z.string().optional(), // field array ID from react-hook-form
       name: z.string().min(1, "نام عضو الزامی است."),
       avatarUrl: z.string().optional(),
   })).optional().default([]),
@@ -32,6 +32,7 @@ export type TaskFormData = z.infer<typeof taskSchema>;
 
 export const initiativeSchema = z.object({
   id: idSchema,
+  keyResultId: z.number().optional(),
   description: z.string().min(1, "شرح اقدام الزامی است").max(300, "شرح اقدام بیش از حد طولانی است"),
   status: z.enum(INITIATIVE_STATUSES, { required_error: "وضعیت اقدام الزامی است." }),
   tasks: z.array(taskSchema).default([]),
@@ -40,6 +41,7 @@ export type InitiativeFormData = z.infer<typeof initiativeSchema>;
 
 export const riskSchema = z.object({
   id: idSchema,
+  keyResultId: z.number().optional(),
   description: z.string().min(1, "شرح ریسک الزامی است.").max(300, "شرح ریسک بیش از حد طولانی است."),
   correctiveAction: z.string().min(1, "اقدام اصلاحی الزامی است.").max(300, "شرح اقدام اصلاحی بیش از حد طولانی است."),
   status: z.enum(RISK_STATUSES, { required_error: "وضعیت ریسک الزامی است." }),
@@ -49,6 +51,7 @@ export type RiskFormData = z.infer<typeof riskSchema>;
 
 export const keyResultSchema = z.object({
   id: z.number().optional(),
+  objectiveId: z.number().optional(),
   description: z.string().min(1, "شرح نتیجه کلیدی الزامی است").max(300, "شرح نتیجه کلیدی بیش از حد طولانی است"),
   progress: z.number().min(0).max(100).default(0).optional(),
   confidenceLevel: z.enum(CONFIDENCE_LEVELS),
@@ -102,7 +105,7 @@ export const calendarSettingsSchema = z.object({
   frequency: z.enum(meetingFrequencyValues, {
     required_error: "فرکانس جلسات الزامی است.",
   }),
-  checkInDayOfWeek: z.number({
+  checkInDayOfWeek: z.coerce.number({
     required_error: "روز جلسات هفتگی الزامی است.",
     invalid_type_error: "روز انتخاب شده برای جلسات نامعتبر است."
   }).refine(val => persianWeekDayValues.includes(val)),
@@ -112,4 +115,3 @@ export const calendarSettingsSchema = z.object({
   }).optional(),
 });
 export type CalendarSettingsFormData = z.infer<typeof calendarSettingsSchema>;
-

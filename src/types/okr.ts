@@ -2,7 +2,7 @@
 import type { z } from 'zod';
 import type { objectiveFormSchema, teamSchema, memberSchema, initiativeSchema, taskSchema, newOkrCycleFormSchema, calendarSettingsSchema, riskSchema, setActiveOkrCycleFormSchema } from '@/lib/schemas';
 import { roleEnum } from '../../drizzle/schema';
-import type { ConfidenceLevel, InitiativeStatus, RiskStatus } from './constants';
+import type { ConfidenceLevel, InitiativeStatus, RiskStatus, MeetingFrequencyValue } from './constants';
 
 export type Role = z.infer<typeof roleEnum>;
 
@@ -11,6 +11,7 @@ export interface Member {
   id: number;
   name: string;
   avatarUrl?: string | null;
+  teamId: number;
 }
 
 export interface Team {
@@ -29,12 +30,14 @@ export interface TeamWithMembership extends Team {
 
 export interface Task {
   id: number | string;
+  initiativeId: number;
   description: string;
   completed: boolean;
 }
 
 export interface Initiative {
   id: number | string;
+  keyResultId: number;
   description: string;
   status: InitiativeStatus;
   tasks: Task[];
@@ -42,6 +45,7 @@ export interface Initiative {
 
 export interface Risk {
     id: number | string;
+    keyResultId: number;
     description: string;
     correctiveAction: string;
     status: RiskStatus;
@@ -49,6 +53,7 @@ export interface Risk {
 
 export interface KeyResult {
   id: number;
+  objectiveId: number;
   description: string;
   progress: number;
   confidenceLevel: ConfidenceLevel;
@@ -63,6 +68,7 @@ export interface Objective {
   keyResults: KeyResult[];
   teamId: number;
   cycleId: number;
+  createdAt: Date;
 }
 
 export type ObjectiveFormData = z.infer<typeof objectiveFormSchema>;
@@ -85,7 +91,7 @@ export type SetActiveOkrCycleFormData = z.infer<typeof setActiveOkrCycleFormSche
 
 
 export interface CalendarSettings {
-  frequency: 'weekly' | 'bi-weekly' | 'monthly';
+  frequency: MeetingFrequencyValue;
   checkInDayOfWeek: number;
   evaluationDate?: Date;
 }

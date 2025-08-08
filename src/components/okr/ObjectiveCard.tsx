@@ -1,4 +1,6 @@
 
+'use client';
+
 import type { Objective } from '@/types/okr';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +18,7 @@ interface ObjectiveCardProps {
   onCheckIn: (objective: Objective) => void;
 }
 
-export function ObjectiveCard({ objective, teamName, onEdit, onCheckIn }: ObjectiveCardProps) {
+const ObjectiveCardComponent = ({ objective, teamName, onEdit, onCheckIn }: ObjectiveCardProps) => {
   const [openKeyResult, setOpenKeyResult] = React.useState<string | undefined>(objective.keyResults.length > 0 ? `kr-${objective.keyResults[0].id}` : undefined);
   
   return (
@@ -94,3 +96,5 @@ export function ObjectiveCard({ objective, teamName, onEdit, onCheckIn }: Object
     </Card>
   );
 }
+
+export const ObjectiveCard = React.memo(ObjectiveCardComponent);

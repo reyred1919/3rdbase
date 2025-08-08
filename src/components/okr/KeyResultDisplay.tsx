@@ -1,3 +1,7 @@
+
+'use client';
+
+import React from 'react';
 import type { KeyResult, Risk } from '@/types/okr';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +46,7 @@ function RiskDisplay({ risk }: { risk: Risk }) {
   );
 }
 
-export function KeyResultDisplay({ keyResult }: KeyResultDisplayProps) {
+function KeyResultDisplayComponent({ keyResult }: KeyResultDisplayProps) {
   const confidence = confidenceMeta[keyResult.confidenceLevel];
   const ConfidenceIcon = confidence.icon;
 
@@ -133,3 +137,5 @@ export function KeyResultDisplay({ keyResult }: KeyResultDisplayProps) {
     </Card>
   );
 }
+
+export const KeyResultDisplay = React.memo(KeyResultDisplayComponent);

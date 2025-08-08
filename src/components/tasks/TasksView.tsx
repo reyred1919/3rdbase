@@ -85,15 +85,15 @@ export function TasksView() {
     return flatList;
   }, [objectives]);
 
-  const handleManageClick = (model: InitiativeViewModel) => {
+  const handleManageClick = useCallback((model: InitiativeViewModel) => {
     setEditingInitiative(model);
     setIsManageInitiativeDialogOpen(true);
-  };
+  }, []);
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setEditingInitiative(null);
     setIsManageInitiativeDialogOpen(false);
-  };
+  }, []);
 
   const handleSaveInitiative = useCallback(async (updatedInitiativeData: InitiativeFormData) => {
     if (!editingInitiative) return;
@@ -132,7 +132,7 @@ export function TasksView() {
             console.error("Save initiative error:", e);
         }
     });
-}, [editingInitiative, objectives, toast, fetchData]);
+}, [editingInitiative, objectives, toast, fetchData, handleCloseDialog]);
 
 
   if (isLoading || status === 'loading') {

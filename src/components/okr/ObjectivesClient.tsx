@@ -14,12 +14,15 @@ import { getObjectives, saveObjective, deleteObjective, getTeams, getOkrCycles, 
 
 const ManageObjectiveDialog = dynamic(() => import('@/components/okr/ManageObjectiveDialog').then(mod => mod.ManageObjectiveDialog), {
   loading: () => <div className="p-4">در حال بارگذاری فرم...</div>,
+  ssr: false,
 });
 const CheckInModal = dynamic(() => import('@/components/okr/CheckInModal').then(mod => mod.CheckInModal), {
   loading: () => <div className="p-4">در حال بارگذاری...</div>,
+  ssr: false,
 });
 const ManageOkrCycleDialog = dynamic(() => import('@/components/okr/ManageOkrCycleDialog').then(mod => mod.ManageOkrCycleDialog), {
   loading: () => <div className="p-4">در حال بارگذاری...</div>,
+  ssr: false,
 });
 
 export function ObjectivesClient() {
@@ -69,7 +72,7 @@ export function ObjectivesClient() {
   }, [status, fetchData]);
 
 
-  const handleAddObjectiveClick = () => {
+  const handleAddObjectiveClick = useCallback(() => {
     if (!activeCycle) {
         toast({
             title: "چرخه OKR انتخاب نشده است",
@@ -80,14 +83,14 @@ export function ObjectivesClient() {
     }
     setEditingObjective(null);
     setIsManageObjectiveDialogOpen(true);
-  };
+  }, [activeCycle, toast]);
 
-  const handleEditObjective = (objective: Objective) => {
+  const handleEditObjective = useCallback((objective: Objective) => {
     setEditingObjective(objective);
     setIsManageObjectiveDialogOpen(true);
-  };
+  }, []);
 
-  const handleManageObjectiveSubmit = async (data: ObjectiveFormData) => {
+  const handleManageObjectiveSubmit = useCallback(async (data: ObjectiveFormData) => {
     startTransition(async () => {
       try {
         await saveObjective(data);
@@ -100,14 +103,14 @@ export function ObjectivesClient() {
         console.error("Save objective error:", error);
       }
     });
-  };
+  }, [fetchData, toast]);
   
-  const handleOpenCheckInModal = (objective: Objective) => {
+  const handleOpenCheckInModal = useCallback((objective: Objective) => {
     setCurrentObjectiveForCheckIn(objective);
     setIsCheckInModalOpen(true);
-  };
+  }, []);
 
-  const handleUpdateObjectiveAfterCheckIn = async (updatedObjectiveData: ObjectiveFormData) => {
+  const handleUpdateObjectiveAfterCheckIn = useCallback(async (updatedObjectiveData: ObjectiveFormData) => {
      startTransition(async () => {
       try {
         await saveObjective(updatedObjectiveData);
@@ -118,9 +121,9 @@ export function ObjectivesClient() {
         toast({ variant: 'destructive', title: 'خطا در به‌روزرسانی هدف' });
       }
     });
-  };
+  }, [fetchData, toast]);
 
-  const handleManageCycleSubmit = async (data: SetActiveOkrCycleFormData) => {
+  const handleManageCycleSubmit = useCallback(async (data: SetActiveOkrCycleFormData) => {
     startTransition(async () => {
       try {
         await setActiveOkrCycle(data.activeCycleId);
@@ -131,7 +134,7 @@ export function ObjectivesClient() {
         toast({ variant: 'destructive', title: 'خطا در ذخیره چرخه' });
       }
     });
-  };
+  }, [fetchData, toast]);
   
   const teamsMap = new Map(teams.map(team => [team.id, team.name]));
 

@@ -1,9 +1,13 @@
-import NextAuth from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
-const { auth } = NextAuth(authOptions);
+import { auth } from '@/../auth';
+import { NextResponse } from 'next/server';
 
-export default auth;
+export default auth((req) => {
+  if (!req.auth) {
+    const url = req.url.replace(req.nextUrl.pathname, '/login');
+    return NextResponse.redirect(url);
+  }
+});
 
 export const config = {
   // Matches all routes except for the ones starting with:

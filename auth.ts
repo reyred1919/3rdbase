@@ -56,8 +56,7 @@ export const {
       }),
   ],
   callbacks: {
-    // We keep the full callbacks here for the server-side session management
-    authorized: authConfig.callbacks.authorized, // Re-use the authorized callback
+    ...authConfig.callbacks, // Re-use the authorized callback
 
     // Extend callbacks for JWT and session
     jwt({ token, user }) {

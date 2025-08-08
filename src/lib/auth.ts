@@ -3,7 +3,7 @@ import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import * as schema from '@/drizzle/schema';
+import * as schema from '../../drizzle/schema';
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from 'drizzle-orm';
 import type { Adapter } from 'next-auth/adapters';

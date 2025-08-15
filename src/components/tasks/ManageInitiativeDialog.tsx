@@ -4,7 +4,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { initiativeSchema } from '@/lib/schemas';
 import type { Initiative, InitiativeFormData } from '@/types/okr';
-import { INITIATIVE_STATUSES } from '@/lib/constants';
+import { INITIATIVE_STATUSES, MAPPED_INITIATIVE_STATUSES } from '@/lib/constants';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -88,7 +88,7 @@ export function ManageInitiativeDialog({ isOpen, onClose, initiative, onSave, is
                               </SelectTrigger>
                               <SelectContent>
                                   {INITIATIVE_STATUSES.map(status => (
-                                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  <SelectItem key={status} value={status}>{MAPPED_INITIATIVE_STATUSES[status]}</SelectItem>
                                   ))}
                               </SelectContent>
                           </Select>

@@ -1,24 +1,23 @@
 
 import NextAuth from 'next-auth';
-import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db } from '@/lib/db';
+import { PrismaAdapter } from '@auth/prisma-adapter';
 import type { Adapter } from 'next-auth/adapters';
-import { authConfig } from './auth.config'; // Importing the base config
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { users } from './drizzle/schema';
-import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
-// This is the main auth file, used by the API routes and server-side logic.
-// It extends the base config with the database adapter and session strategy.
+import { authConfig } from './auth.config';
+import { db } from '@/lib/db';
+import { getUserByUsername } from './src/lib/data/actions';
+
+
 export const {
   handlers: { GET, POST },
   auth,
   signIn,
   signOut
 } = NextAuth({
-  ...authConfig, // Spread the base config
-  adapter: DrizzleAdapter(db) as Adapter,
+  ...authConfig,
+  adapter: PrismaAdapter(db) as Adapter,
   session: { strategy: 'jwt' },
   providers: [
     CredentialsProvider({
@@ -32,9 +31,7 @@ export const {
             return null;
           }
 
-          const user = await db.query.users.findFirst({
-              where: eq(users.username, credentials.username as string),
-          });
+          const user = await getUserByUsername(credentials.username as string);
 
           if (!user || !user.hashedPassword) {
             return null;
@@ -43,7 +40,6 @@ export const {
           const isPasswordCorrect = await bcrypt.compare(credentials.password as string, user.hashedPassword);
 
           if (isPasswordCorrect) {
-            // Return a user object that matches the `User` type in `next-auth`
             return {
               id: user.id,
               name: user.username,
@@ -56,9 +52,9 @@ export const {
       }),
   ],
   callbacks: {
-    ...authConfig.callbacks, // Re-use the authorized callback
+    ...authConfig.callbacks, // Re-use the authorized callback from the edge-safe config
 
-    // Extend callbacks for JWT and session
+    // Extend callbacks for JWT and session management on the server
     jwt({ token, user }) {
         if (user) {
             // On sign-in, attach the user's ID to the token

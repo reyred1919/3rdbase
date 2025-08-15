@@ -18,7 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Lightbulb, Sparkles } from 'lucide-react';
 import type { Objective, ObjectiveFormData } from '@/types/okr';
 import { getOkrImprovementSuggestionsAction } from '@/lib/data/actions';
-import { CONFIDENCE_LEVELS } from '@/lib/constants';
+import { CONFIDENCE_LEVELS, MAPPED_CONFIDENCE_LEVELS } from '@/lib/constants';
 import { checkInFormSchema, type CheckInFormData } from '@/lib/schemas';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -151,7 +151,7 @@ export function CheckInModal({ isOpen, onClose, objective, onUpdateObjective, is
                               </SelectTrigger>
                               <SelectContent>
                                 {CONFIDENCE_LEVELS.map(level => (
-                                  <SelectItem key={level} value={level}>{level}</SelectItem>
+                                  <SelectItem key={level} value={level}>{MAPPED_CONFIDENCE_LEVELS[level]}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>

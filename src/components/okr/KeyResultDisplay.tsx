@@ -13,31 +13,32 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { MAPPED_CONFIDENCE_LEVELS, MAPPED_RISK_STATUSES } from '@/lib/constants';
 
 interface KeyResultDisplayProps {
   keyResult: KeyResult;
 }
 
-const confidenceMeta: Record<ConfidenceLevel, { icon: React.ElementType, indicatorClass: string, textClass: string, label: string }> = {
-  'زیاد': { icon: Smile, indicatorClass: 'bg-green-500', textClass: 'text-green-600', label: 'زیاد' },
-  'متوسط': { icon: Meh, indicatorClass: 'bg-yellow-500', textClass: 'text-yellow-600', label: 'متوسط' },
-  'کم': { icon: Frown, indicatorClass: 'bg-orange-500', textClass: 'text-orange-600', label: 'کم' },
-  'در معرض خطر': { icon: AlertTriangle, indicatorClass: 'bg-red-500', textClass: 'text-red-600', label: 'در معرض خطر' },
+const confidenceMeta: Record<ConfidenceLevel, { icon: React.ElementType, indicatorClass: string, textClass: string }> = {
+  'HIGH': { icon: Smile, indicatorClass: 'bg-green-500', textClass: 'text-green-600' },
+  'MEDIUM': { icon: Meh, indicatorClass: 'bg-yellow-500', textClass: 'text-yellow-600' },
+  'LOW': { icon: Frown, indicatorClass: 'bg-orange-500', textClass: 'text-orange-600' },
+  'AT_RISK': { icon: AlertTriangle, indicatorClass: 'bg-red-500', textClass: 'text-red-600' },
 };
 
 const riskStatusStyles: Record<RiskStatus, string> = {
-  'فعال': 'bg-red-100 text-red-700 border-red-300',
-  'در حال بررسی': 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  'حل شده': 'bg-green-100 text-green-700 border-green-300',
+  'ACTIVE': 'bg-red-100 text-red-700 border-red-300',
+  'UNDER_REVIEW': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  'RESOLVED': 'bg-green-100 text-green-700 border-green-300',
 };
 
 function RiskDisplay({ risk }: { risk: Risk }) {
-  const badgeClass = riskStatusStyles[risk.status] || riskStatusStyles['فعال'];
+  const badgeClass = riskStatusStyles[risk.status] || riskStatusStyles['ACTIVE'];
   return (
     <div className="flex flex-col gap-2 p-2.5 bg-red-500/5 rounded-md border border-destructive/20">
         <div className="flex items-center justify-between">
             <p className="text-sm text-foreground font-medium">{risk.description}</p>
-            <Badge variant="outline" className={cn("text-xs font-medium px-2 py-0.5", badgeClass)}>{risk.status}</Badge>
+            <Badge variant="outline" className={cn("text-xs font-medium px-2 py-0.5", badgeClass)}>{MAPPED_RISK_STATUSES[risk.status]}</Badge>
         </div>
         <p className="text-sm text-muted-foreground pl-5 border-r-2 border-destructive/50 pr-2">
             <span className="font-semibold text-foreground">اقدام اصلاحی:</span> {risk.correctiveAction}
@@ -83,7 +84,7 @@ function KeyResultDisplayComponent({ keyResult }: KeyResultDisplayProps) {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
              <ConfidenceIcon className={cn("w-5 h-5", confidence.textClass)} />
-            <Badge variant="outline" className={cn("text-xs border-current", confidence.textClass)}>{confidence.label}</Badge>
+            <Badge variant="outline" className={cn("text-xs border-current", confidence.textClass)}>{MAPPED_CONFIDENCE_LEVELS[keyResult.confidenceLevel]}</Badge>
           </div>
         </div>
       </CardHeader>

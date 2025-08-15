@@ -1,13 +1,11 @@
 
 import { z } from 'zod';
-import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, RISK_STATUSES, MEETING_FREQUENCIES, PERSIAN_WEEK_DAYS } from './constants';
-import { roleEnum } from '../../drizzle/schema';
+import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, RISK_STATUSES, MEETING_FREQUENCIES, PERSIAN_WEEK_DAYS, ROLES, MAPPED_INITIATIVE_STATUSES, MAPPED_CONFIDENCE_LEVELS } from './constants';
 
-// Base ID schema for reusability
 const idSchema = z.union([z.string(), z.number()]).optional();
 
 export const memberSchema = z.object({
-  id: z.union([z.string(), z.number()]), // ID can be string from form, will be number in DB
+  id: z.number(),
   name: z.string().min(1, "نام عضو الزامی است.").max(100, "نام عضو بیش از حد طولانی است."),
   avatarUrl: z.string().url("آدرس آواتار نامعتبر است.").optional().nullable(),
 });
@@ -15,8 +13,8 @@ export const memberSchema = z.object({
 export const teamSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "نام تیم الزامی است.").max(100, "نام تیم بیش از حد طولانی است."),
-  members: z.array(z.object({ // Simplified for form usage
-      id: z.string().optional(), // field array ID from react-hook-form
+  members: z.array(z.object({
+      id: z.string().optional(), // This is the string ID from react-hook-form's `useFieldArray`
       name: z.string().min(1, "نام عضو الزامی است."),
       avatarUrl: z.string().optional(),
   })).optional().default([]),
@@ -112,6 +110,6 @@ export const calendarSettingsSchema = z.object({
   evaluationDate: z.date({
     required_error: "تاریخ جلسه ارزیابی الزامی است.",
     invalid_type_error: "تاریخ جلسه ارزیابی نامعتبر است."
-  }).optional(),
+  }).optional().nullable(),
 });
 export type CalendarSettingsFormData = z.infer<typeof calendarSettingsSchema>;

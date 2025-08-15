@@ -13,6 +13,7 @@ import { faIR } from 'date-fns/locale';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getObjectives, getActiveOkrCycle } from '@/lib/data/actions';
+import { MAPPED_CONFIDENCE_LEVELS } from '@/lib/constants';
 
 const getProgressIndicatorClass = (progress: number): string => {
     if (progress >= 75) return 'bg-green-500';
@@ -73,23 +74,16 @@ export function DashboardView() {
   const summaryStats = useMemo(() => {
     let totalProgressSum = 0;
     let totalKeyResultsCount = 0;
-
-    const confidenceValueMapping: Record<ConfidenceLevel, number> = {
-        'زیاد': 3,
-        'متوسط': 2,
-        'کم': 1,
-        'در معرض خطر': 0,
-    };
     
     const confidenceMeta: Record<ConfidenceLevel, { icon: React.ElementType, colorClass: string }> = {
-        'زیاد': { icon: Smile, colorClass: 'text-green-600' },
-        'متوسط': { icon: Meh, colorClass: 'text-yellow-600' },
-        'کم': { icon: Frown, colorClass: 'text-orange-500' },
-        'در معرض خطر': { icon: AlertTriangle, colorClass: 'text-red-600' },
+        'HIGH': { icon: Smile, colorClass: 'text-green-600' },
+        'MEDIUM': { icon: Meh, colorClass: 'text-yellow-600' },
+        'LOW': { icon: Frown, colorClass: 'text-orange-500' },
+        'AT_RISK': { icon: AlertTriangle, colorClass: 'text-red-600' },
     };
 
     const objectivesWithProgress: { id: string | number; description: string; progress: number }[] = [];
-    const confidenceCounts: Record<ConfidenceLevel, number> = { 'زیاد': 0, 'متوسط': 0, 'کم': 0, 'در معرض خطر': 0 };
+    const confidenceCounts: Record<ConfidenceLevel, number> = { 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'AT_RISK': 0 };
 
     objectives.forEach(obj => {
       let totalKrProgress = 0;
@@ -131,7 +125,7 @@ export function DashboardView() {
       }
     }
     
-    let dominantConfidence: ConfidenceLevel = 'متوسط';
+    let dominantConfidence: ConfidenceLevel = 'MEDIUM';
     if(totalKeyResultsCount > 0) {
         dominantConfidence = (Object.keys(confidenceCounts) as ConfidenceLevel[]).reduce((a, b) => confidenceCounts[a] > confidenceCounts[b] ? a : b);
     }
@@ -150,7 +144,7 @@ export function DashboardView() {
       } : null,
       cycleName: activeCycle?.name,
       dominantConfidence: {
-        label: dominantConfidence,
+        label: MAPPED_CONFIDENCE_LEVELS[dominantConfidence],
         Icon: dominantConfidenceMeta.icon,
         colorClass: dominantConfidenceMeta.colorClass
       },

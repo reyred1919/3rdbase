@@ -20,7 +20,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Trash2, PlusCircle, Loader2 } from 'lucide-react';
 import type { Objective, ObjectiveFormData, Member, Team, TeamWithMembership } from '@/types/okr';
 import { objectiveFormSchema } from '@/lib/schemas';
-import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, DEFAULT_KEY_RESULT, type ConfidenceLevel, RISK_STATUSES } from '@/lib/constants';
+import { CONFIDENCE_LEVELS, INITIATIVE_STATUSES, DEFAULT_KEY_RESULT, type ConfidenceLevel, RISK_STATUSES, MAPPED_CONFIDENCE_LEVELS, MAPPED_INITIATIVE_STATUSES, MAPPED_RISK_STATUSES } from '@/lib/constants';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -41,7 +41,7 @@ const getInitialKeyResultsForForm = (objective: Objective | null | undefined): K
   const defaultKrTemplate: KeyResultFormData = { 
     description: '',
     progress: 0,
-    confidenceLevel: 'متوسط' as ConfidenceLevel,
+    confidenceLevel: 'MEDIUM' as ConfidenceLevel,
     initiatives: [],
     risks: [],
     assignees: [],
@@ -193,7 +193,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
                                 </SelectTrigger>
                                 <SelectContent>
                                   {CONFIDENCE_LEVELS.map(level => (
-                                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                                    <SelectItem key={level} value={level}>{MAPPED_CONFIDENCE_LEVELS[level]}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -231,7 +231,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => appendKr({ description: '', confidenceLevel: 'متوسط', assignees: [], risks: [], initiatives: []})}
+                  onClick={() => appendKr({ description: '', confidenceLevel: 'MEDIUM', assignees: [], risks: [], initiatives: []})}
                   className="mt-2 w-full"
                   disabled={krFields.length >= 7}
                 >
@@ -292,7 +292,7 @@ function InitiativesArrayField({ control, krIndex, register, errors }: any) {
                 </SelectTrigger>
                 <SelectContent>
                   {INITIATIVE_STATUSES.map(status => (
-                    <SelectItem key={status} value={status} className="text-sm">{status}</SelectItem>
+                    <SelectItem key={status} value={status} className="text-sm">{MAPPED_INITIATIVE_STATUSES[status]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -301,7 +301,7 @@ function InitiativesArrayField({ control, krIndex, register, errors }: any) {
           {errors.keyResults?.[krIndex]?.initiatives?.[initiativeIndex]?.status && <p className="text-destructive text-xs mt-1">{errors.keyResults[krIndex]?.initiatives[initiativeIndex]?.status?.message}</p>}
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', status: 'شروع نشده', tasks: [] })} className="mt-1 w-full">
+      <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', status: 'NOT_STARTED', tasks: [] })} className="mt-1 w-full">
         <PlusCircle className="w-4 h-4 ml-2" /> افزودن اقدام
       </Button>
     </div>
@@ -356,7 +356,7 @@ function RisksArrayField({ control, krIndex, register, errors }: any) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {RISK_STATUSES.map(status => (
-                                        <SelectItem key={status} value={status} className="text-sm">{status}</SelectItem>
+                                        <SelectItem key={status} value={status} className="text-sm">{MAPPED_RISK_STATUSES[status]}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -365,10 +365,9 @@ function RisksArrayField({ control, krIndex, register, errors }: any) {
                     {errors.keyResults?.[krIndex]?.risks?.[riskIndex]?.status && <p className="text-destructive text-xs mt-1">{errors.keyResults[krIndex].risks[riskIndex].status.message}</p>}
                 </div>
             ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', correctiveAction: '', status: 'فعال' })} className="mt-1 w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive">
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', correctiveAction: '', status: 'ACTIVE' })} className="mt-1 w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive">
                 <PlusCircle className="w-4 h-4 ml-2" /> افزودن ریسک
             </Button>
         </div>
     );
 }
-

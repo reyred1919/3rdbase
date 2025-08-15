@@ -1,16 +1,16 @@
 
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import * as schema from '../../../drizzle/schema';
+import { PrismaClient } from '@prisma/client';
 
-if (!process.env.DATABASE_URL) {
-  // In a real app, you'd want to throw an error, but for Studio's iterative
-  // development, we can let it slide and it will be caught by query attempts.
-  console.warn('DATABASE_URL environment variable is not set.');
-}
+// This is a common pattern to prevent creating too many Prisma Client instances in development
+// due to Next.js's hot reloading.
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const db = drizzle(pool, { schema });
+export const db =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    // Optional: log database queries
+    // log: ['query', 'info', 'warn', 'error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;

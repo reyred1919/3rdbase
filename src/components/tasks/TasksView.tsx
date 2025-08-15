@@ -14,6 +14,7 @@ import { ListChecks, Settings, AlertCircle, Loader2 } from 'lucide-react';
 import type { InitiativeStatus } from '@/lib/constants';
 import { getObjectives, saveObjective } from '@/lib/data/actions';
 import { useToast } from '@/hooks/use-toast';
+import { MAPPED_INITIATIVE_STATUSES } from '@/lib/constants';
 
 const ManageInitiativeDialog = dynamic(() => import('@/components/tasks/ManageInitiativeDialog').then(mod => mod.ManageInitiativeDialog), {
   loading: () => <p>در حال بارگذاری...</p>,
@@ -21,10 +22,10 @@ const ManageInitiativeDialog = dynamic(() => import('@/components/tasks/ManageIn
 });
 
 const statusStyles: Record<InitiativeStatus, string> = {
-  'شروع نشده': 'bg-gray-100 text-gray-600 border-gray-300',
-  'در حال انجام': 'bg-blue-100 text-blue-700 border-blue-300',
-  'تکمیل شده': 'bg-green-100 text-green-700 border-green-300',
-  'مسدود شده': 'bg-red-100 text-red-700 border-red-300',
+  'NOT_STARTED': 'bg-gray-100 text-gray-600 border-gray-300',
+  'IN_PROGRESS': 'bg-blue-100 text-blue-700 border-blue-300',
+  'COMPLETED': 'bg-green-100 text-green-700 border-green-300',
+  'BLOCKED': 'bg-red-100 text-red-700 border-red-300',
 };
 
 // Represents a flattened initiative for easy rendering
@@ -171,7 +172,7 @@ export function TasksView() {
             const totalTasks = model.initiative.tasks.length;
             const completedTasks = model.initiative.tasks.filter(t => t.completed).length;
             const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-            const badgeClass = statusStyles[model.initiative.status] || statusStyles['شروع نشده'];
+            const badgeClass = statusStyles[model.initiative.status] || statusStyles['NOT_STARTED'];
 
             return (
               <Card key={model.initiative.id} className="flex flex-col">
@@ -207,7 +208,7 @@ export function TasksView() {
                 </CardContent>
                 <CardFooter className="flex justify-between items-center bg-muted/50 p-3 mt-4">
                   <Badge variant="outline" className={`text-xs font-medium px-2 py-1 ${badgeClass}`}>
-                    {model.initiative.status}
+                    {MAPPED_INITIATIVE_STATUSES[model.initiative.status]}
                   </Badge>
                   <Button size="sm" variant="outline" onClick={() => handleManageClick(model)} disabled={isPending}>
                     {isPending && editingInitiative?.initiative.id === model.initiative.id ? <Loader2 className="w-4 h-4 ml-2 animate-spin"/> : <Settings className="w-4 h-4 ml-2" />}

@@ -10,10 +10,11 @@ import { Prisma } from '@prisma/client';
 
 async function getUserIdOrThrow(): Promise<string> {
     const session = await auth();
-    if (!session?.user?.id) {
-        throw new Error('Not authenticated');
+    const userId = session?.user?.id;
+    if (!userId || isNaN(parseInt(userId))) {
+        throw new Error('Not authenticated or user ID is invalid');
     }
-    return session.user.id;
+    return userId;
 }
 
 // --- User ---
@@ -58,7 +59,7 @@ async function getObjectiveById(objectiveId: number): Promise<Objective> {
 
 
 export async function getObjectives(): Promise<Objective[]> {
-    const userId = await getUserIdOrThrow();
+    const userId = parseInt(await getUserIdOrThrow());
     
     const activeCycle = await db.activeOkrCycle.findUnique({
         where: { userId },
@@ -227,30 +228,37 @@ export async function deleteObjective(objectiveId: number): Promise<void> {
 
 // --- Teams ---
 export async function getTeams(): Promise<TeamWithMembership[]> {
-    const userId = await getUserIdOrThrow();
+    const userId = parseInt(await getUserIdOrThrow());
     const teamMemberships = await db.teamMembership.findMany({
         where: { userId },
         include: {
             team: {
                 include: {
                     members: true,
-                    owner: { select: { name: true } },
-                    invitationLink: true,
+                    owner: { select: { firstName: true, lastName: true } },
+                    invitations: { 
+                        take: 1,
+                        orderBy: { createdAt: 'desc' }
+                    },
                 }
             }
         },
-        orderBy: { teamId: 'asc' },
+        orderBy: { team: { createdAt: 'asc'} },
     });
     
     return teamMemberships.map(tm => ({
         ...tm.team,
         role: tm.role,
-        invitationLink: tm.team.invitationLink?.link
+        invitationLink: tm.team.invitations[0]?.code,
+        owner: tm.team.owner,
     }));
 }
 
 export async function addTeam(teamData: TeamFormData) {
-    const userId = await getUserIdOrThrow();
+    const userId = parseInt(await getUserIdOrThrow());
+
+    // Generate a more readable, yet unique invitation code
+    const uniqueCode = `${teamData.name.replace(/\s+/g, '-').slice(0, 10)}-${crypto.randomUUID().slice(0, 4)}`.toUpperCase();
 
     await db.team.create({
         data: {
@@ -265,9 +273,9 @@ export async function addTeam(teamData: TeamFormData) {
                     avatarUrl: m.avatarUrl || `https://placehold.co/40x40.png?text=${m.name.charAt(0)}`,
                 }))
             },
-            invitationLink: {
+            invitations: {
                 create: {
-                    link: `${process.env.NEXTAUTH_URL}/teams/join/${crypto.randomUUID()}`,
+                    code: uniqueCode,
                     creatorId: userId,
                 }
             }
@@ -327,15 +335,18 @@ export async function deleteTeam(teamId: number): Promise<{ success: boolean, me
 
 // --- OKR Cycles ---
 export async function getOkrCycles(): Promise<OkrCycle[]> {
-    const userId = await getUserIdOrThrow();
-    return await db.okrCycle.findMany({
-        where: { ownerId: userId },
-        orderBy: { startDate: 'desc' }
+    const userId = parseInt(await getUserIdOrThrow());
+    // In a multi-tenant system, this would be filtered by the user's organization.
+    // For this app, we assume cycles are owned by users.
+    const userCycles = await db.okrCycle.findMany({
+         where: { ownerId: userId },
+         orderBy: { startDate: 'desc' }
     });
+    return userCycles;
 }
 
 export async function createOkrCycle(data: OkrCycleFormData) {
-    const userId = await getUserIdOrThrow();
+    const userId = parseInt(await getUserIdOrThrow());
     await db.okrCycle.create({ data: { ...data, ownerId: userId } });
     revalidatePath('/cycles');
 }
@@ -365,7 +376,7 @@ export async function deleteOkrCycle(cycleId: number) {
 
 
 export async function getActiveOkrCycle(): Promise<OkrCycle | null> {
-    const userId = await getUserIdOrThrow();
+    const userId = parseInt(await getUserIdOrThrow());
     const activeCycleInfo = await db.activeOkrCycle.findUnique({
         where: { userId },
         include: { cycle: true }
@@ -373,13 +384,18 @@ export async function getActiveOkrCycle(): Promise<OkrCycle | null> {
     return activeCycleInfo?.cycle ?? null;
 }
 
-export async function setActiveOkrCycle(cycleId: number) {
-    const userId = await getUserIdOrThrow();
-    await db.activeOkrCycle.upsert({
-        where: { userId },
-        update: { cycleId },
-        create: { userId, cycleId }
-    });
+export async function setActiveOkrCycle(cycleId: number | null) {
+    const userId = parseInt(await getUserIdOrThrow());
+    
+    if (cycleId === null) {
+        await db.activeOkrCycle.delete({ where: { userId }});
+    } else {
+         await db.activeOkrCycle.upsert({
+            where: { userId },
+            update: { cycleId },
+            create: { userId, cycleId }
+        });
+    }
 
     revalidatePath('/dashboard');
     revalidatePath('/objectives');
@@ -389,7 +405,7 @@ export async function setActiveOkrCycle(cycleId: number) {
 
 // --- Calendar ---
 export async function saveCalendarSettings(data: CalendarSettingsFormData): Promise<void> {
-    const userId = await getUserIdOrThrow();
+    const userId = parseInt(await getUserIdOrThrow());
     await db.calendarSettings.upsert({
         where: { userId },
         update: data,
@@ -399,7 +415,7 @@ export async function saveCalendarSettings(data: CalendarSettingsFormData): Prom
 }
 
 export async function getCalendarSettings(): Promise<CalendarSettings | null> {
-    const userId = await getUserIdOrThrow();
+    const userId = parseInt(await getUserIdOrThrow());
     return await db.calendarSettings.findUnique({ where: { userId } });
 }
 

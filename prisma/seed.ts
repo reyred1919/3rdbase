@@ -22,7 +22,8 @@ async function main() {
             data: {
                 username: SEED_USER_USERNAME,
                 hashedPassword: hashedPassword,
-                name: SEED_USER_USERNAME,
+                firstName: 'Seed',
+                lastName: 'User',
                 email: `${SEED_USER_USERNAME}@example.com`
             }
         });
@@ -63,6 +64,7 @@ async function main() {
 
     for (const teamData of teamsToCreate) {
         console.log(`- Creating team: "${teamData.name}"`);
+        const uniqueCode = `${teamData.name.replace(/\s+/g, '-').slice(0, 10)}-${crypto.randomUUID().slice(0, 4)}`.toUpperCase();
         await prisma.team.create({
             data: {
                 name: teamData.name,
@@ -75,6 +77,12 @@ async function main() {
                 },
                 members: {
                     create: teamData.members
+                },
+                invitations: {
+                    create: {
+                        code: uniqueCode,
+                        creatorId: user.id,
+                    }
                 }
             }
         });
@@ -91,4 +99,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

@@ -53,36 +53,37 @@ const ManageTeamDialog = dynamic(() => import('@/components/teams/ManageTeamDial
 });
 
 
-function InvitationLinkDisplay({ link }: { link: string | null | undefined }) {
+function InvitationLinkDisplay({ code }: { code: string | null | undefined }) {
   const [copied, setCopied] = useState(false);
 
-  if (!link) {
+  if (!code) {
     return (
         <p className="text-sm text-muted-foreground p-2 bg-muted rounded-md text-center">
-            لینک دعوت برای این تیم در دسترس نیست.
+            کد دعوتی برای این تیم یافت نشد.
         </p>
     );
   }
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(link);
+    navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="mt-4 p-3 border-dashed border-2 border-primary/30 rounded-lg bg-primary/5">
-        <Label className="text-xs font-semibold text-primary">لینک دعوت اختصاصی تیم</Label>
+        <Label className="text-xs font-semibold text-primary">کد دعوت اختصاصی تیم</Label>
         <div className="flex items-center gap-2 mt-2">
             <Input
                 readOnly
-                value={link}
-                className="text-xs bg-white/50 text-primary-dark truncate"
+                value={code}
+                className="text-center font-mono tracking-widest text-lg bg-white/50 text-primary-dark"
             />
             <Button size="icon" variant="ghost" onClick={handleCopy} className="h-9 w-9 flex-shrink-0 text-primary hover:bg-primary/10">
                 {copied ? <Check className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
             </Button>
         </div>
+        <p className="text-xs text-muted-foreground mt-2 text-center">این کد را برای دعوت اعضای جدید به تیم خود به اشتراک بگذارید.</p>
     </div>
   );
 }
@@ -253,7 +254,7 @@ export function TeamsClient() {
                  ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">این تیم هنوز عضوی ندارد.</p>
                  )}
-                 {team.role === 'admin' && <InvitationLinkDisplay link={team.invitationLink} />}
+                 {team.role === 'admin' && <InvitationLinkDisplay code={team.invitationLink} />}
               </CardContent>
             </Card>
           ))}

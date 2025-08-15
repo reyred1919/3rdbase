@@ -1,6 +1,8 @@
-
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -11,21 +13,207 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- NextAuth.js Models ---
-// These are required for the Prisma adapter to work.
+model User {
+  id              Int      @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  mobile          String?
+  email           String   @unique
+  username        String   @unique
+  hashedPassword  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  ownedTeams      Team[]     @relation("TeamOwner")
+  memberships     TeamMembership[]
+  createdInvitations TeamInvitation[] @relation("CreatedBy")
+  accounts        Account[]
+  sessions        Session[]
+}
 
+model Team {
+  id              Int      @id @default(autoincrement())
+  name            String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  ownerId         Int
+  owner           User     @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  memberships     TeamMembership[]
+  members         Member[]
+  objectives      Objective[]
+  invitations     TeamInvitation[]
+}
+
+model TeamMembership {
+  id              Int      @id @default(autoincrement())
+  role            Role     @default(member)
+  
+  teamId          Int
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  
+  @@unique([teamId, userId])
+}
+
+model Member {
+  id              Int      @id @default(autoincrement())
+  name            String
+  avatarUrl       String?
+  
+  teamId          Int
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  keyResultAssignments KeyResultAssignee[]
+}
+
+model TeamInvitation {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  
+  teamId          Int
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  creatorId       Int
+  creator         User     @relation("CreatedBy", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model OkrCycle {
+  id              Int        @id @default(autoincrement())
+  name            String
+  startDate       DateTime
+  endDate         DateTime
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  ownerId         Int
+  // Not a real relation, just for tracking. onDelete: set null would be ideal if supported for non-relation fields
+  objectives      Objective[]
+  activeForUsers  ActiveOkrCycle[]
+}
+
+model ActiveOkrCycle {
+  id              Int      @id @default(autoincrement())
+  
+  userId          Int      @unique
+  // Not a real relation
+  
+  cycleId         Int
+  cycle           OkrCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Objective {
+  id              Int          @id @default(autoincrement())
+  description     String
+  
+  teamId          Int
+  team            Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  cycleId         Int
+  cycle           OkrCycle     @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  
+  keyResults      KeyResult[]
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model KeyResult {
+  id              Int          @id @default(autoincrement())
+  description     String
+  progress        Float        @default(0)
+  confidenceLevel ConfidenceLevel @default(MEDIUM)
+  
+  objectiveId     Int
+  objective       Objective    @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  
+  initiatives     Initiative[]
+  risks           Risk[]
+  assignees       KeyResultAssignee[]
+}
+
+model KeyResultAssignee {
+  id              Int          @id @default(autoincrement())
+  
+  keyResultId     Int
+  keyResult       KeyResult    @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+
+  memberId        Int
+  member          Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  assignedAt      DateTime     @default(now())
+
+  @@unique([keyResultId, memberId])
+}
+
+
+model Initiative {
+  id              Int             @id @default(autoincrement())
+  description     String
+  status          InitiativeStatus @default(NOT_STARTED)
+  
+  keyResultId     Int
+  keyResult       KeyResult       @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  
+  tasks           Task[]
+}
+
+model Task {
+  id              Int         @id @default(autoincrement())
+  description     String
+  completed       Boolean     @default(false)
+  
+  initiativeId    Int
+  initiative      Initiative  @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+}
+
+model Risk {
+  id                Int         @id @default(autoincrement())
+  description       String
+  correctiveAction  String
+  status            RiskStatus  @default(ACTIVE)
+
+  keyResultId       Int
+  keyResult         KeyResult   @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+}
+
+model CalendarSettings {
+  id                 Int      @id @default(autoincrement())
+  frequency          String
+  checkInDayOfWeek   Int
+  evaluationDate     DateTime?
+  
+  userId             Int      @unique
+  // Not a real relation
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// NextAuth models
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
+  id                Int      @id @default(autoincrement())
+  userId            Int
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -34,122 +222,17 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(cuid())
+  id           Int      @id @default(autoincrement())
   sessionToken String   @unique
-  userId       String
+  userId       Int
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-// --- Custom Application Models ---
-
-model User {
-  id              String      @id @default(cuid())
-  name            String?
-  username        String      @unique
-  email           String?     @unique
-  emailVerified   DateTime?
-  image           String?
-  hashedPassword  String?
-  accounts        Account[]
-  sessions        Session[]
-  ownedTeams      Team[]      @relation("TeamOwner")
-  memberships     TeamMembership[]
-  ownedCycles     OkrCycle[]
-  activeCycle     ActiveOkrCycle?
-  calendarSettings CalendarSettings?
-  createdInvitationLinks TeamInvitationLink[]
-}
 
 enum Role {
   admin
   member
-}
-
-model Team {
-  id            Int            @id @default(autoincrement())
-  name          String
-  ownerId       String
-  owner         User           @relation("TeamOwner", fields: [ownerId], references: [id])
-  memberships   TeamMembership[]
-  members       Member[]
-  objectives    Objective[]
-  invitationLink TeamInvitationLink?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
-model TeamMembership {
-  teamId  Int
-  userId  String
-  role    Role
-  team    Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignedAt DateTime @default(now())
-
-  @@id([teamId, userId])
-}
-
-model TeamInvitationLink {
-  id          Int      @id @default(autoincrement())
-  link        String   @unique
-  teamId      Int      @unique
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  creatorId   String
-  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime?
-}
-
-model Member {
-  id        Int      @id @default(autoincrement())
-  name      String
-  avatarUrl String?
-  teamId    Int
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  keyResultAssignments KeyResultAssignee[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model OkrCycle {
-  id        Int       @id @default(autoincrement())
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  ownerId   String
-  owner     User      @relation(fields: [ownerId], references: [id])
-  objectives Objective[]
-  activeForUsers ActiveOkrCycle[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-model ActiveOkrCycle {
-  userId  String    @id
-  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cycleId Int
-  cycle   OkrCycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-}
-
-model Objective {
-  id          Int         @id @default(autoincrement())
-  description String      @db.Text
-  teamId      Int
-  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  cycleId     Int
-  cycle       OkrCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  keyResults  KeyResult[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
 }
 
 enum ConfidenceLevel {
@@ -159,29 +242,6 @@ enum ConfidenceLevel {
   AT_RISK
 }
 
-model KeyResult {
-  id              Int       @id @default(autoincrement())
-  description     String    @db.Text
-  progress        Int       @default(0)
-  confidenceLevel ConfidenceLevel @default(MEDIUM)
-  objectiveId     Int
-  objective       Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
-  initiatives     Initiative[]
-  risks           Risk[]
-  assignees       KeyResultAssignee[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-model KeyResultAssignee {
-  keyResultId Int
-  memberId    Int
-  keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
-  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  
-  @@id([keyResultId, memberId])
-}
-
 enum InitiativeStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -189,50 +249,8 @@ enum InitiativeStatus {
   BLOCKED
 }
 
-model Initiative {
-  id          Int            @id @default(autoincrement())
-  description String         @db.Text
-  status      InitiativeStatus @default(NOT_STARTED)
-  keyResultId Int
-  keyResult   KeyResult      @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
-  tasks       Task[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-}
-
-model Task {
-  id          Int        @id @default(autoincrement())
-  description String     @db.Text
-  completed   Boolean    @default(false)
-  initiativeId Int
-  initiative  Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
 enum RiskStatus {
   ACTIVE
   UNDER_REVIEW
   RESOLVED
-}
-
-model Risk {
-  id              Int        @id @default(autoincrement())
-  description     String     @db.Text
-  correctiveAction String    @db.Text
-  status          RiskStatus @default(ACTIVE)
-  keyResultId     Int
-  keyResult       KeyResult  @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-}
-
-model CalendarSettings {
-  userId            String    @id
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  frequency         String
-  checkInDayOfWeek  Int
-  evaluationDate    DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
 }

@@ -23,6 +23,10 @@ export interface TeamWithMembership extends Team {
     role: Role;
     invitationLink?: string | null;
     members: Member[];
+    owner: {
+        firstName: string | null;
+        lastName: string | null;
+    }
 }
 
 // Form-specific types inferred from Zod schemas

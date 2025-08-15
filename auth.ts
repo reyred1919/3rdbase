@@ -41,7 +41,7 @@ export const {
 
           if (isPasswordCorrect) {
             return {
-              id: user.id,
+              id: user.id.toString(),
               name: user.username,
               email: user.email,
             };

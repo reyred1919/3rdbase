@@ -8,25 +8,39 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Target, UserPlus } from 'lucide-react';
+import { Target, UserPlus, Building } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { Separator } from '@/components/ui/separator';
 
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobile: '',
+    email: '',
+    username: '',
+    password: '',
+    invitationCode: ''
+  });
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!username || !password) {
+    const { firstName, lastName, email, username, password } = formData;
+    if (!firstName || !lastName || !email || !username || !password) {
         toast({
             variant: "destructive",
             title: "خطا",
-            description: "لطفاً نام کاربری و رمز عبور را وارد کنید.",
+            description: "لطفاً تمام فیلدهای ستاره‌دار را پر کنید.",
         });
         setIsLoading(false);
         return;
@@ -36,7 +50,7 @@ export default function SignupPage() {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -66,8 +80,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted">
-      <Card className="w-full max-w-sm shadow-2xl">
+    <div className="flex items-center justify-center min-h-screen bg-muted py-12">
+      <Card className="w-full max-w-lg shadow-2xl">
         <CardHeader className="text-center">
           <Link href="/" className="flex justify-center items-center gap-2 mb-4">
             <Target className="h-8 w-8 text-primary" />
@@ -77,34 +91,57 @@ export default function SignupPage() {
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">نام کاربری</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="یک نام کاربری انتخاب کنید"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete="username"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">نام <span className="text-destructive">*</span></Label>
+                <Input id="firstName" value={formData.firstName} onChange={handleChange} required disabled={isLoading} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">نام خانوادگی <span className="text-destructive">*</span></Label>
+                <Input id="lastName" value={formData.lastName} onChange={handleChange} required disabled={isLoading} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">رمز عبور</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="یک رمز عبور قوی انتخاب کنید"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete="new-password"
-              />
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="email">ایمیل <span className="text-destructive">*</span></Label>
+                    <Input id="email" type="email" value={formData.email} onChange={handleChange} required disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="mobile">شماره موبایل</Label>
+                    <Input id="mobile" type="tel" value={formData.mobile} onChange={handleChange} disabled={isLoading} />
+                </div>
             </div>
+
+            <Separator className="my-6" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                <Label htmlFor="username">نام کاربری <span className="text-destructive">*</span></Label>
+                <Input id="username" value={formData.username} onChange={handleChange} required disabled={isLoading} autoComplete="username" />
+                </div>
+                <div className="space-y-2">
+                <Label htmlFor="password">رمز عبور <span className="text-destructive">*</span></Label>
+                <Input id="password" type="password" value={formData.password} onChange={handleChange} required disabled={isLoading} autoComplete="new-password" />
+                </div>
+            </div>
+
+            <Separator className="my-6"/>
+            
+            <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
+                <div className="flex items-center gap-2 mb-2">
+                    <Building className="w-5 h-5 text-muted-foreground"/>
+                    <h3 className="font-semibold text-foreground">پیوستن به سازمان (اختیاری)</h3>
+                </div>
+                 <p className="text-xs text-muted-foreground mb-3">اگر کد دعوت دارید، اینجا وارد کنید تا به تیم خود بپیوندید.</p>
+                <div className="space-y-2">
+                    <Label htmlFor="invitationCode">کد دعوت</Label>
+                    <Input id="invitationCode" value={formData.invitationCode} onChange={handleChange} disabled={isLoading} className="bg-background"/>
+                </div>
+            </div>
+
           </CardContent>
-          <CardFooter className="flex-col gap-4">
+          <CardFooter className="flex-col gap-4 mt-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'در حال ایجاد حساب...' : 'ثبت‌نام'}
               <UserPlus className="w-4 h-4 mr-2" />

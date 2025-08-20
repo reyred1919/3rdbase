@@ -22,9 +22,7 @@ export type CalendarSettings = PrismaCalendarSettings;
 export interface TeamWithMembership extends Team {
     role: Role;
     invitationLink?: string | null;
-    members: Member[];
     ownerName: string;
-    invitations: TeamInvitation[];
 }
 
 // Form-specific types inferred from Zod schemas

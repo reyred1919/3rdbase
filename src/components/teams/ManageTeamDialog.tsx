@@ -4,14 +4,6 @@
 import React, { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,25 +16,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import type { Team, TeamFormData, TeamWithMembership } from '@/types/okr';
+import type { TeamFormData, TeamWithMembership } from '@/types/okr';
 import { teamSchema } from '@/lib/schemas';
-import { Plus, Trash2, Edit, Users, Loader2, Clipboard, Check } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { useSession } from 'next-auth/react';
-import { getTeams, addTeam, updateTeam, deleteTeam } from '@/lib/data/actions';
-import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function ManageTeamDialog({

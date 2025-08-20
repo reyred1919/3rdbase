@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/okr/EmptyState';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Plus, Settings2, Loader2 } from 'lucide-react';
-import { getObjectives, saveObjective, deleteObjective, getTeams, getOkrCycles, getActiveOkrCycle, setActiveOkrCycle } from '@/lib/data/actions';
+import { getObjectives, saveObjective, getTeams, getOkrCycles, getActiveOkrCycle, setActiveOkrCycle } from '@/lib/data/actions';
 
 const ManageObjectiveDialog = dynamic(() => import('@/components/okr/ManageObjectiveDialog').then(mod => mod.ManageObjectiveDialog), {
   loading: () => <div className="p-4">در حال بارگذاری فرم...</div>,

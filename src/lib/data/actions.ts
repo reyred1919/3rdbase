@@ -250,14 +250,13 @@ export async function getTeams(): Promise<TeamWithMembership[]> {
         ...tm.team,
         role: tm.role,
         invitationLink: tm.team.invitations[0]?.code,
-        owner: tm.team.owner,
+        ownerName: tm.team.owner ? `${tm.team.owner.firstName} ${tm.team.owner.lastName}`.trim() : 'Unknown',
     }));
 }
 
 export async function addTeam(teamData: TeamFormData) {
     const userId = parseInt(await getUserIdOrThrow());
 
-    // Generate a more readable, yet unique invitation code
     const uniqueCode = `${teamData.name.replace(/\s+/g, '-').slice(0, 10)}-${crypto.randomUUID().slice(0, 4)}`.toUpperCase();
 
     await db.team.create({
@@ -441,7 +440,7 @@ export async function getOkrImprovementSuggestionsAction(objective: Objective) {
         const suggestions = await suggestOkrsImprovements(inputForAI);
         return suggestions;
     } catch (error) {
-        console.error("AI suggestion generation failed:", error);
+        console.error("AI suggestion failed:", error);
         throw new Error("Failed to get AI suggestions.");
     }
 }

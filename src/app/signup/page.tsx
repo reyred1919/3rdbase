@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -25,6 +26,14 @@ export default function SignupPage() {
     invitationCode: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const codeFromQuery = searchParams.get('code');
+    if (codeFromQuery) {
+      setFormData(prev => ({ ...prev, invitationCode: codeFromQuery }));
+    }
+  }, [searchParams]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;

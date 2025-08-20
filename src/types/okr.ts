@@ -2,7 +2,7 @@
 import type { z } from 'zod';
 import type { objectiveFormSchema, teamSchema, memberSchema, initiativeSchema, taskSchema, newOkrCycleFormSchema, calendarSettingsSchema, riskSchema, setActiveOkrCycleFormSchema } from '@/lib/schemas';
 import type { Role, ConfidenceLevel, InitiativeStatus, RiskStatus, MeetingFrequencyValue } from './constants';
-import type { User as PrismaUser, Team as PrismaTeam, Member as PrismaMember, OkrCycle as PrismaOkrCycle, Initiative as PrismaInitiative, KeyResult as PrismaKeyResult, Objective as PrismaObjective, Risk as PrismaRisk, Task as PrismaTask, CalendarSettings as PrismaCalendarSettings } from '@prisma/client';
+import type { User as PrismaUser, Team as PrismaTeam, Member as PrismaMember, OkrCycle as PrismaOkrCycle, Initiative as PrismaInitiative, KeyResult as PrismaKeyResult, Objective as PrismaObjective, Risk as PrismaRisk, Task as PrismaTask, CalendarSettings as PrismaCalendarSettings, TeamInvitation } from '@prisma/client';
 
 export type { Role, ConfidenceLevel, InitiativeStatus, RiskStatus, MeetingFrequencyValue };
 
@@ -23,10 +23,8 @@ export interface TeamWithMembership extends Team {
     role: Role;
     invitationLink?: string | null;
     members: Member[];
-    owner: {
-        firstName: string | null;
-        lastName: string | null;
-    }
+    ownerName: string;
+    invitations: TeamInvitation[];
 }
 
 // Form-specific types inferred from Zod schemas

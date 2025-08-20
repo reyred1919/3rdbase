@@ -45,6 +45,7 @@ import { useSession } from 'next-auth/react';
 import { getTeams, addTeam, updateTeam, deleteTeam } from '@/lib/data/actions';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
 
 
 const ManageTeamDialog = dynamic(() => import('@/components/teams/ManageTeamDialog').then(mod => mod.ManageTeamDialog), {
@@ -64,8 +65,16 @@ function InvitationLinkDisplay({ code }: { code: string | null | undefined }) {
     );
   }
 
-  const handleCopy = () => {
+  const signupUrl = `${window.location.origin}/signup?code=${code}`;
+
+  const handleCopyCode = () => {
     navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+    const handleCopyLink = () => {
+    navigator.clipboard.writeText(signupUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -79,11 +88,15 @@ function InvitationLinkDisplay({ code }: { code: string | null | undefined }) {
                 value={code}
                 className="text-center font-mono tracking-widest text-lg bg-white/50 text-primary-dark"
             />
-            <Button size="icon" variant="ghost" onClick={handleCopy} className="h-9 w-9 flex-shrink-0 text-primary hover:bg-primary/10">
+            <Button size="icon" variant="ghost" onClick={handleCopyCode} className="h-9 w-9 flex-shrink-0 text-primary hover:bg-primary/10">
                 {copied ? <Check className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
             </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 text-center">این کد را برای دعوت اعضای جدید به تیم خود به اشتراک بگذارید.</p>
+        <p className="text-xs text-muted-foreground mt-2 text-center">
+            این کد را به اشتراک بگذارید یا 
+            <Button variant="link" className="p-0 h-auto mx-1" onClick={handleCopyLink}>لینک دعوت</Button>
+            را کپی کنید.
+        </p>
     </div>
   );
 }

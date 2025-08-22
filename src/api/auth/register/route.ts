@@ -33,18 +33,18 @@ export async function POST(req: Request) {
 
     let teamMembershipInfo = {};
     if (invitationCode) {
-        const invitation = await db.teamInvitation.findUnique({
-            where: { code: invitationCode },
+        const team = await db.team.findFirst({
+            where: { invitationLink: invitationCode },
         });
 
-        if (!invitation) {
+        if (!team) {
             return NextResponse.json({ message: 'کد دعوت نامعتبر است.' }, { status: 400 });
         }
         
         teamMembershipInfo = {
             memberships: {
                 create: {
-                    teamId: invitation.teamId,
+                    teamId: team.id,
                     role: 'member' // All invited users are members by default
                 }
             }

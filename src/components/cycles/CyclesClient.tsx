@@ -76,8 +76,9 @@ export function CyclesClient() {
             toast({ title: "چرخه حذف شد" });
             await fetchData();
         } catch(error) {
+            const errorMessage = (error as Error).message || 'یک خطای ناشناخته رخ داد.';
             console.error("Delete cycle error:", error);
-            toast({ variant: 'destructive', title: 'خطا در حذف چرخه', description: (error as Error).message });
+            toast({ variant: 'destructive', title: 'خطا در حذف چرخه', description: errorMessage });
         }
     });
   }

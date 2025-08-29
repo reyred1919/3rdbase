@@ -108,7 +108,6 @@ export async function getObjectives(): Promise<Objective[]> {
     }));
 }
 
-
 export async function saveObjective(data: ObjectiveFormData): Promise<Objective> {
     await getUserIdOrThrow();
 
@@ -122,85 +121,104 @@ export async function saveObjective(data: ObjectiveFormData): Promise<Objective>
         cycleId: data.cycleId
     };
 
-    const keyResultsData = data.keyResults.map(kr => {
-        const calculatedProgress = calculateKrProgress(kr as KeyResult);
-        return {
-            id: kr.id,
-            description: kr.description,
-            confidenceLevel: kr.confidenceLevel,
-            progress: calculatedProgress,
-            assignees: {
-                deleteMany: {}, // Clear existing assignees
-                create: (kr.assignees || []).map(a => ({
-                    member: { connect: { id: a.id } }
-                }))
-            },
-            initiatives: {
-                upsert: (kr.initiatives || []).map(init => ({
-                    where: { id: init.id || -1 },
-                    update: {
-                        description: init.description,
-                        status: init.status,
-                        tasks: {
-                           deleteMany: {},
-                           create: (init.tasks || []).map(t => ({ description: t.description, completed: t.completed }))
-                        }
-                    },
-                    create: {
-                        description: init.description,
-                        status: init.status,
-                        tasks: {
-                           create: (init.tasks || []).map(t => ({ description: t.description, completed: t.completed }))
-                        }
-                    }
-                }))
-            },
-            risks: {
-                upsert: (kr.risks || []).map(risk => ({
-                    where: { id: risk.id || -1 },
-                    update: {
-                        description: risk.description,
-                        correctiveAction: risk.correctiveAction,
-                        status: risk.status
-                    },
-                    create: {
-                        description: risk.description,
-                        correctiveAction: risk.correctiveAction,
-                        status: risk.status
-                    }
-                }))
-            }
-        };
-    });
+    const transactionSteps = [];
 
-    const savedObjective = await db.objective.upsert({
+    // Step 1: Upsert the Objective itself
+    const objectiveUpsertPromise = db.objective.upsert({
         where: { id: data.id || -1 },
-        update: {
-            ...objectiveData,
-            keyResults: {
-                deleteMany: {
-                    id: { notIn: keyResultsData.filter(kr => kr.id).map(kr => kr.id!) }
-                },
-                upsert: keyResultsData.map(kr => ({
-                    where: { id: kr.id || -1 },
-                    update: { ...kr, id: undefined },
-                    create: { ...kr, id: undefined }
-                }))
-            }
-        },
-        create: {
-            ...objectiveData,
-            keyResults: {
-                create: keyResultsData.map(kr => ({ ...kr, id: undefined }))
-            }
+        update: objectiveData,
+        create: objectiveData,
+    });
+    
+    // We execute the first part to get the objective ID
+    const savedObjective = await objectiveUpsertPromise;
+    const objectiveId = savedObjective.id;
+
+    // Step 2: Handle Key Results
+    const incomingKrIds = data.keyResults.filter(kr => kr.id).map(kr => kr.id as number);
+    
+    // Delete KRs that are no longer present
+    const deleteKrsPromise = db.keyResult.deleteMany({
+        where: {
+            objectiveId: objectiveId,
+            id: { notIn: incomingKrIds }
         }
     });
+
+    transactionSteps.push(deleteKrsPromise);
+
+    // Upsert each Key Result individually
+    for (const krData of data.keyResults) {
+        const calculatedProgress = calculateKrProgress(krData as KeyResult);
+        
+        const krUpsertPromise = db.keyResult.upsert({
+            where: { id: krData.id || -1 },
+            update: {
+                description: krData.description,
+                confidenceLevel: krData.confidenceLevel,
+                progress: calculatedProgress,
+            },
+            create: {
+                objectiveId: objectiveId,
+                description: krData.description,
+                confidenceLevel: krData.confidenceLevel,
+                progress: calculatedProgress,
+            }
+        }).then(async (savedKr) => {
+            const krId = savedKr.id;
+            
+            // Handle KR Assignees (many-to-many)
+            await db.keyResultAssignee.deleteMany({ where: { keyResultId: krId }});
+            if (krData.assignees && krData.assignees.length > 0) {
+                await db.keyResultAssignee.createMany({
+                    data: krData.assignees.map(a => ({ keyResultId: krId, memberId: a.id }))
+                });
+            }
+
+            // Handle Initiatives
+            const incomingInitIds = (krData.initiatives || []).filter(i => i.id).map(i => i.id as number);
+            await db.initiative.deleteMany({ where: { keyResultId: krId, id: { notIn: incomingInitIds } } });
+            
+            for (const initData of (krData.initiatives || [])) {
+                const savedInitiative = await db.initiative.upsert({
+                    where: { id: initData.id || -1 },
+                    update: { description: initData.description, status: initData.status },
+                    create: { keyResultId: krId, description: initData.description, status: initData.status }
+                });
+                const initId = savedInitiative.id;
+
+                // Handle Tasks
+                await db.task.deleteMany({ where: { initiativeId: initId } });
+                if (initData.tasks && initData.tasks.length > 0) {
+                    await db.task.createMany({
+                        data: initData.tasks.map(t => ({ ...t, initiativeId: initId, id: undefined }))
+                    });
+                }
+            }
+
+            // Handle Risks
+            const incomingRiskIds = (krData.risks || []).filter(r => r.id).map(r => r.id as number);
+            await db.risk.deleteMany({ where: { keyResultId: krId, id: { notIn: incomingRiskIds } } });
+
+            for (const riskData of (krData.risks || [])) {
+                await db.risk.upsert({
+                    where: { id: riskData.id || -1 },
+                    update: { description: riskData.description, correctiveAction: riskData.correctiveAction, status: riskData.status },
+                    create: { keyResultId: krId, description: riskData.description, correctiveAction: riskData.correctiveAction, status: riskData.status }
+                });
+            }
+        });
+        transactionSteps.push(krUpsertPromise);
+    }
+    
+    // Execute all steps in a transaction
+    await db.$transaction(transactionSteps);
 
     revalidatePath('/objectives');
     revalidatePath('/dashboard');
     revalidatePath('/tasks');
     
-    return getObjectiveById(savedObjective.id);
+    return getObjectiveById(objectiveId);
 }
 
 

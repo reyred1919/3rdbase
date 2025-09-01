@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Team, TeamFormData, TeamWithMembership } from '@/types/okr';
 import { teamSchema } from '@/lib/schemas';
-import { Plus, Trash2, Edit, Users, Loader2, Clipboard, Check } from 'lucide-react';
+import { Plus, Trash2, Edit, Users, Loader2, Clipboard, Check, LogIn } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   AlertDialog,
@@ -42,7 +42,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useSession } from 'next-auth/react';
-import { getTeams, addTeam, updateTeam, deleteTeam } from '@/lib/data/actions';
+import { getTeams, addTeam, updateTeam, deleteTeam, joinTeamWithCode } from '@/lib/data/actions';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
@@ -99,6 +99,54 @@ function InvitationLinkDisplay({ code }: { code: string | null | undefined }) {
         </p>
     </div>
   );
+}
+
+function JoinTeamForm({ onTeamJoined }: { onTeamJoined: () => void }) {
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
+    const [code, setCode] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!code.trim()) {
+            toast({ title: "خطا", description: "لطفاً کد دعوت را وارد کنید.", variant: "destructive" });
+            return;
+        }
+
+        startTransition(async () => {
+            const result = await joinTeamWithCode(code);
+            if (result.success) {
+                toast({ title: "عضویت موفق", description: result.message });
+                onTeamJoined();
+                setCode('');
+            } else {
+                toast({ title: "خطا در عضویت", description: result.message, variant: "destructive" });
+            }
+        });
+    };
+
+    return (
+        <Card className="mb-8 shadow-sm border-primary/20">
+            <CardHeader>
+                <CardTitle className="text-lg font-headline">پیوستن به یک تیم دیگر</CardTitle>
+                <CardDescription>اگر کد دعوت دارید، آن را اینجا وارد کنید تا به تیم جدید ملحق شوید.</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+                <CardContent className="flex flex-col sm:flex-row gap-2">
+                    <Input 
+                        placeholder="کد دعوت خود را وارد کنید..."
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        disabled={isPending}
+                    />
+                    <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
+                        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                        <span className="mr-2">پیوستن</span>
+                    </Button>
+                </CardContent>
+            </form>
+        </Card>
+    );
 }
 
 
@@ -195,6 +243,8 @@ export function TeamsClient() {
           <Plus className="h-4 w-4 ml-2" /> ایجاد تیم جدید
         </Button>
       </div>
+      
+      <JoinTeamForm onTeamJoined={fetchTeams} />
 
       {teams.length === 0 ? (
         <div className="text-center py-16 flex flex-col items-center bg-card rounded-lg shadow-md mt-8">

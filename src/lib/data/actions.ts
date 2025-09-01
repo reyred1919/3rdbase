@@ -365,6 +365,66 @@ export async function deleteTeam(teamId: number): Promise<{ success: boolean, me
     return { success: true };
 }
 
+export async function joinTeamWithCode(code: string): Promise<{ success: boolean; message: string }> {
+    const userId = parseInt(await getUserIdOrThrow());
+
+    if (!code || typeof code !== 'string' || code.trim() === '') {
+        return { success: false, message: 'کد دعوت نامعتبر است.' };
+    }
+
+    // Find the invitation and the associated team
+    const invitation = await db.teamInvitation.findUnique({
+        where: { code },
+        include: { team: true },
+    });
+
+    if (!invitation) {
+        return { success: false, message: 'کد دعوت یافت نشد.' };
+    }
+
+    // Check if user is already a member of this team
+    const existingMembership = await db.teamMembership.findUnique({
+        where: {
+            userId_teamId: {
+                userId,
+                teamId: invitation.teamId,
+            },
+        },
+    });
+
+    if (existingMembership) {
+        return { success: false, message: 'شما در حال حاضر عضو این تیم هستید.' };
+    }
+    
+    const user = await db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+         return { success: false, message: 'کاربر یافت نشد.' };
+    }
+
+    // Create the membership and the member record in a transaction
+    await db.$transaction([
+        db.teamMembership.create({
+            data: {
+                userId,
+                teamId: invitation.teamId,
+                role: 'member', // Default role for invited users
+            },
+        }),
+        db.member.create({
+            data: {
+                name: `${user.firstName} ${user.lastName}`,
+                avatarUrl: `https://placehold.co/40x40.png?text=${user.firstName?.charAt(0)}`,
+                teamId: invitation.teamId,
+                userId, // Link the member record to the user record
+            },
+        }),
+    ]);
+    
+    revalidatePath('/teams');
+
+    return { success: true, message: `شما با موفقیت به تیم «${invitation.team.name}» پیوستید!` };
+}
+
 
 // --- OKR Cycles ---
 export async function getOkrCycles(): Promise<OkrCycle[]> {

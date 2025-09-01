@@ -32,50 +32,55 @@ export async function POST(req: Request) {
     }
 
     let teamData = {};
+    let teamToJoin = null;
+
     if (invitationCode) {
         const invitation = await db.teamInvitation.findUnique({
             where: { code: invitationCode },
+            include: { team: true }
         });
 
         if (!invitation) {
             return NextResponse.json({ message: 'کد دعوت نامعتبر است.' }, { status: 400 });
         }
-        
-        // This structure will be spread into the user create call
-        teamData = {
-            memberships: {
-                create: {
-                    teamId: invitation.teamId,
-                    role: 'member' // All invited users are members by default
-                }
-            },
-            // This is a "connect-or-create" pattern for the Member table,
-            // but since it's a new user, it will always be a "create".
-            // This creates the Member record associated with the user and the team.
-            memberOf: {
-                create: {
-                    teamId: invitation.teamId,
-                    name: `${firstName} ${lastName}`,
-                    avatarUrl: `https://placehold.co/40x40.png?text=${firstName.charAt(0)}`
-                }
-            }
-        };
+        teamToJoin = invitation.team;
     }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the new user along with any team connections
-    await db.user.create({
-      data: {
-        username,
-        hashedPassword,
-        email,
-        firstName,
-        lastName,
-        mobile,
-        ...teamData // Spread the team membership and member data here
-      }
+    // Create the new user and potentially connect to a team
+    await db.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+            data: {
+                username,
+                hashedPassword,
+                email,
+                firstName,
+                lastName,
+                mobile,
+            }
+        });
+
+        if (teamToJoin) {
+            // Create membership link
+            await tx.teamMembership.create({
+                data: {
+                    userId: newUser.id,
+                    teamId: teamToJoin.id,
+                    role: 'member' // All invited users are members by default
+                }
+            });
+            // Create a member record
+            await tx.member.create({
+                data: {
+                    teamId: teamToJoin.id,
+                    userId: newUser.id,
+                    name: `${firstName} ${lastName}`,
+                    avatarUrl: `https://placehold.co/40x40.png?text=${firstName.charAt(0)}`
+                }
+            });
+        }
     });
 
     return NextResponse.json({ message: 'کاربر با موفقیت ایجاد شد. اکنون می‌توانید وارد شوید.' }, { status: 201 });

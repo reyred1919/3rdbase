@@ -103,7 +103,7 @@ export async function getObjectives(): Promise<Objective[]> {
         ...obj,
         keyResults: obj.keyResults.map(kr => ({
             ...kr,
-            assignees: kr.assignees.map(kra => kra.member)
+            assignees: obj.keyResults.flatMap(kr => kr.assignees.map(kra => kra.member))
         }))
     }));
 }
@@ -208,11 +208,12 @@ export async function saveObjective(data: ObjectiveFormData): Promise<Objective>
             }
         }
         
+        const finalObjective = await getObjectiveById(newObjectiveId);
+        
         revalidatePath('/objectives');
         revalidatePath('/dashboard');
         revalidatePath('/tasks');
         
-        const finalObjective = await getObjectiveById(newObjectiveId);
         return finalObjective;
     });
 }

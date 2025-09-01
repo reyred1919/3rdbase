@@ -109,16 +109,16 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-headline">{initialData ? 'ویرایش هدف' : 'افزودن هدف جدید'}</DialogTitle>
           <DialogDescription>
             هدف خود و نتایج کلیدی و اقدامات قابل اندازه‌گیری آن را تعریف کنید. این هدف به چرخه فعال فعلی اختصاص داده می‌شود.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(processSubmit)}>
-          <ScrollArea className="max-h-[calc(80vh-150px)]">
-            <div className="space-y-6 pt-3 pr-6 pb-3 pl-2">
+        <form onSubmit={form.handleSubmit(processSubmit)} className="flex-grow flex flex-col min-h-0">
+          <ScrollArea className="flex-grow pr-4 -mr-6">
+            <div className="space-y-6 pt-3 pb-3 pr-2">
               <div>
                 <Label htmlFor="objectiveDescription" className="font-semibold text-base">شرح هدف</Label>
                 <Textarea
@@ -240,7 +240,7 @@ export function ManageObjectiveDialog({ isOpen, onClose, onSubmit, initialData, 
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="mt-8 pt-6 border-t sticky bottom-0 bg-background py-4">
+          <DialogFooter className="mt-4 pt-4 border-t flex-shrink-0">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={isSubmitting}>انصراف</Button>
             </DialogClose>

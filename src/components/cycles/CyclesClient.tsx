@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Plus, Edit, Trash2, Loader2, Calendar } from 'lucide-react';
 import {
   AlertDialog,

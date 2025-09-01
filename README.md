@@ -9,4 +9,4 @@ git push
 
 # 2ndbase
 # 3rdbase
-git a
+git add

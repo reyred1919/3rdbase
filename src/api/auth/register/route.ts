@@ -47,6 +47,13 @@ export async function POST(req: Request) {
                     teamId: invitation.teamId,
                     role: 'member' // All invited users are members by default
                 }
+            },
+            teams: { // This adds the user to the Member table for that team
+                create: {
+                    teamId: invitation.teamId,
+                    name: `${firstName} ${lastName}`,
+                    avatarUrl: `https://placehold.co/40x40.png?text=${firstName.charAt(0)}`
+                }
             }
         };
     }
@@ -74,3 +81,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'خطای داخلی سرور هنگام ثبت‌نام رخ داد.' }, { status: 500 });
   }
 }
+

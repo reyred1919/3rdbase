@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'این ایمیل قبلا ثبت شده است.' }, { status: 409 });
     }
 
-    let teamMembershipInfo = {};
+    let teamData = {};
     if (invitationCode) {
         const invitation = await db.teamInvitation.findUnique({
             where: { code: invitationCode },
@@ -41,14 +41,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'کد دعوت نامعتبر است.' }, { status: 400 });
         }
         
-        teamMembershipInfo = {
+        // This structure will be spread into the user create call
+        teamData = {
             memberships: {
                 create: {
                     teamId: invitation.teamId,
                     role: 'member' // All invited users are members by default
                 }
             },
-            teams: { // This adds the user to the Member table for that team
+            // This is a "connect-or-create" pattern for the Member table,
+            // but since it's a new user, it will always be a "create".
+            // This creates the Member record associated with the user and the team.
+            memberOf: {
                 create: {
                     teamId: invitation.teamId,
                     name: `${firstName} ${lastName}`,
@@ -61,7 +65,7 @@ export async function POST(req: Request) {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the new user
+    // Create the new user along with any team connections
     await db.user.create({
       data: {
         username,
@@ -70,7 +74,7 @@ export async function POST(req: Request) {
         firstName,
         lastName,
         mobile,
-        ...teamMembershipInfo
+        ...teamData // Spread the team membership and member data here
       }
     });
 
@@ -81,4 +85,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'خطای داخلی سرور هنگام ثبت‌نام رخ داد.' }, { status: 500 });
   }
 }
-

@@ -212,7 +212,8 @@ export async function saveObjective(data: ObjectiveFormData): Promise<Objective>
         revalidatePath('/dashboard');
         revalidatePath('/tasks');
         
-        return getObjectiveById(newObjectiveId);
+        const finalObjective = await getObjectiveById(newObjectiveId);
+        return finalObjective;
     });
 }
 
@@ -313,7 +314,8 @@ export async function updateTeam(teamData: TeamFormData) {
         const incomingMembers = teamData.members || [];
         
         const currentMemberIds = new Set(currentMembers.map(m => m.id));
-        const incomingMemberIds = new Set(incomingMembers.map(m => m.id ? parseInt(m.id) : -1));
+        const incomingMemberIds = new Set(incomingMembers.filter(m => m.id).map(m => parseInt(m.id!)));
+
 
         // 1. Delete members that are no longer in the list
         const memberIdsToDelete = currentMembers
@@ -362,7 +364,7 @@ export async function deleteTeam(teamId: number): Promise<{ success: boolean, me
 
     await db.team.delete({ where: { id: teamId }});
     revalidatePath('/teams');
-    return { success: true };
+    return { success: true, message: 'تیم با موفقیت حذف شد.' };
 }
 
 export async function joinTeamWithCode(code: string): Promise<{ success: boolean; message: string }> {

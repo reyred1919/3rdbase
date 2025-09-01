@@ -107,7 +107,7 @@ export function ManageTeamDialog({
                       </Button>
                     </div>
                   ))}
-                  {errors.members && <p className="text-sm text-destructive mt-1">{errors.members.message}</p>}
+                  {errors.members && <p className="text-sm text-destructive mt-1">{errors.members?.message || (Array.isArray(errors.members) && errors.members[0]?.name?.message)}</p>}
                 </div>
                 <Button
                   type="button"

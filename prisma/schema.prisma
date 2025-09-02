@@ -1,43 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id             Int      @id @default(autoincrement())
-  username       String   @unique
-  email          String?  @unique
-  firstName      String?
-  lastName       String?
-  mobile         String?
-  hashedPassword String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  ownedTeams         Team[]           @relation("TeamOwner")
+  id                 Int               @id @default(autoincrement())
+  username           String            @unique
+  email              String?           @unique
+  firstName          String?
+  lastName           String?
+  mobile             String?
+  hashedPassword     String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  is_active          Boolean           @default(false)
+  activeOkrCycle     ActiveOkrCycle?
+  calendarSettings   CalendarSettings?
+  members            Member[]
+  ownedTeams         Team[]            @relation("TeamOwner")
+  createdInvitations TeamInvitation[]  @relation("InvitationCreator")
   memberships        TeamMembership[]
-  createdInvitations TeamInvitation[] @relation("InvitationCreator")
-
-  activeOkrCycle   ActiveOkrCycle?
-  calendarSettings CalendarSettings?
 }
 
 model Team {
-  id        Int      @id @default(autoincrement())
-  name      String
-  ownerId   Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  owner       User             @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  memberships TeamMembership[]
+  id          Int              @id @default(autoincrement())
+  name        String
+  ownerId     Int
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   members     Member[]
   objectives  Objective[]
+  owner       User             @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   invitations TeamInvitation[]
+  memberships TeamMembership[]
 }
 
 model TeamMembership {
@@ -46,22 +45,22 @@ model TeamMembership {
   teamId    Int
   role      Role     @default(member)
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, teamId])
 }
 
 model Member {
-  id        Int      @id @default(autoincrement())
-  teamId    Int
-  name      String
-  avatarUrl String?
-  createdAt DateTime @default(now())
-
-  team                 Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  id                   Int                 @id @default(autoincrement())
+  teamId               Int
+  name                 String
+  avatarUrl            String?
+  createdAt            DateTime            @default(now())
+  userId               Int
   keyResultAssignments KeyResultAssignee[]
+  team                 Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model TeamInvitation {
@@ -71,66 +70,60 @@ model TeamInvitation {
   creatorId Int
   createdAt DateTime  @default(now())
   expiresAt DateTime?
-
-  team    Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  creator User @relation("InvitationCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  creator   User      @relation("InvitationCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
 }
 
 model OkrCycle {
-  id        Int      @id @default(autoincrement())
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  ownerId   Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  objectives     Objective[]
+  id             Int              @id @default(autoincrement())
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  ownerId        Int
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   activeForUsers ActiveOkrCycle[]
+  objectives     Objective[]
 }
 
 model ActiveOkrCycle {
-  userId  Int @unique
+  userId  Int      @unique
   cycleId Int
-
-  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cycle OkrCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  cycle   OkrCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Objective {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   description String
   teamId      Int
   cycleId     Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  cycle      OkrCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  keyResults KeyResult[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  keyResults  KeyResult[]
+  cycle       OkrCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
 }
 
 model KeyResult {
-  id              Int             @id @default(autoincrement())
+  id              Int                 @id @default(autoincrement())
   objectiveId     Int
   description     String
-  progress        Int             @default(0)
-  confidenceLevel ConfidenceLevel @default(MEDIUM)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-
-  objective   Objective           @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
-  initiatives Initiative[]
-  risks       Risk[]
-  assignees   KeyResultAssignee[]
+  progress        Int                 @default(0)
+  confidenceLevel ConfidenceLevel     @default(MEDIUM)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  initiatives     Initiative[]
+  objective       Objective           @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  assignees       KeyResultAssignee[]
+  risks           Risk[]
 }
 
 model KeyResultAssignee {
   keyResultId Int
   memberId    Int
-
-  keyResult KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
-  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@id([keyResultId, memberId])
 }
@@ -142,20 +135,18 @@ model Initiative {
   status      InitiativeStatus @default(NOT_STARTED)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
-
-  keyResult KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
-  tasks     Task[]
+  keyResult   KeyResult        @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  tasks       Task[]
 }
 
 model Task {
-  id           Int      @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   initiativeId Int
   description  String
-  completed    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  initiative Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  completed    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
 }
 
 model Risk {
@@ -166,8 +157,7 @@ model Risk {
   status           RiskStatus @default(ACTIVE)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
-
-  keyResult KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  keyResult        KeyResult  @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
 }
 
 model CalendarSettings {
@@ -175,8 +165,7 @@ model CalendarSettings {
   frequency        String
   checkInDayOfWeek Int
   evaluationDate   DateTime?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Role {

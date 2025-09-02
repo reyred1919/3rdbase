@@ -28,6 +28,12 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   }
 }
 
+export async function getAllUsers(): Promise<User[]> {
+  return await db.user.findMany({
+    orderBy: { id: 'asc' }
+  });
+}
+
 // --- Objective, KR, Initiative, Task, Risk ---
 async function getObjectiveById(objectiveId: number): Promise<Objective> {
   const objectiveRecord = await db.objective.findUnique({
@@ -63,15 +69,34 @@ export async function getObjectives(): Promise<Objective[]> {
   });
   if (!activeCycle) return [];
 
+  // تیم‌هایی که کاربر عضو آن‌هاست
   const teamMemberships = await db.teamMembership.findMany({
     where: { userId },
     select: { teamId: true }
   });
   const teamIds = teamMemberships.map(tm => tm.teamId);
-  if (teamIds.length === 0) return [];
 
+  // اهدافی که کاربر به عنوان assignee در KeyResult آن‌ها حضور دارد
+  const memberRecords = await db.member.findMany({ where: { userId }, select: { id: true } });
+  const memberIds = memberRecords.map(m => m.id);
+
+  // اهداف تیم‌های کاربر یا اهدافی که در KeyResult آن‌ها اساین شده است
   const objectiveRecords = await db.objective.findMany({
-    where: { cycleId: activeCycle.cycleId, teamId: { in: teamIds } },
+    where: {
+      cycleId: activeCycle.cycleId,
+      OR: [
+        { teamId: { in: teamIds } },
+        {
+          keyResults: {
+            some: {
+              assignees: {
+                some: { memberId: { in: memberIds } }
+              }
+            }
+          }
+        }
+      ]
+    },
     include: {
       keyResults: {
         orderBy: { id: 'asc' },
@@ -257,9 +282,10 @@ export async function addTeam(teamData: TeamFormData) {
       ownerId: userId,
       memberships: { create: { userId, role: 'admin' } },
       members: {
-        create: (teamData.members || []).map(m => ({
+        create: (teamData.members || []).map((m: any) => ({
           name: m.name,
           avatarUrl: m.avatarUrl || `https://placehold.co/40x40.png?text=${m.name.charAt(0)}`,
+          user: m.id ? { connect: { id: parseInt(m.id) } } : undefined,
         }))
       },
       invitations: { create: { code: uniqueCode, creatorId: userId } }
@@ -357,7 +383,38 @@ export async function joinTeamWithCode(code: string): Promise<{ success: boolean
 // --- OKR Cycles ---
 export async function getOkrCycles(): Promise<OkrCycle[]> {
   const userId = await getUserIdOrThrow();
-  return await db.okrCycle.findMany({ where: { ownerId: userId }, orderBy: { startDate: 'desc' } });
+
+  // چرخه‌هایی که کاربر مالک آن‌هاست
+  const ownedCycles = await db.okrCycle.findMany({ where: { ownerId: userId }, orderBy: { startDate: 'desc' } });
+
+  // چرخه‌هایی که کاربر به عنوان assignee در اهداف یا keyResult حضور دارد
+  const memberRecords = await db.member.findMany({ where: { userId }, select: { id: true } });
+  const memberIds = memberRecords.map((m: { id: number }) => m.id);
+
+  const assignedObjectives = await db.objective.findMany({
+    where: {
+      keyResults: {
+        some: {
+          assignees: {
+            some: { memberId: { in: memberIds } }
+          }
+        }
+      }
+    },
+    select: { cycleId: true }
+  });
+  const assignedCycleIds = Array.from(new Set(assignedObjectives.map((obj: { cycleId: number }) => obj.cycleId)));
+
+  // دریافت چرخه‌های مرتبط با اساینمنت
+  const assignedCycles = assignedCycleIds.length > 0
+    ? await db.okrCycle.findMany({ where: { id: { in: assignedCycleIds } }, orderBy: { startDate: 'desc' } })
+    : [];
+
+  // ترکیب و حذف تکراری‌ها
+  const allCyclesMap = new Map<number, OkrCycle>();
+  [...ownedCycles, ...assignedCycles].forEach(cycle => allCyclesMap.set(cycle.id, cycle));
+
+  return Array.from(allCyclesMap.values());
 }
 
 export async function createOkrCycle(data: OkrCycleFormData) {

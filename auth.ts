@@ -33,7 +33,7 @@ export const {
 
           const user = await getUserByUsername(credentials.username as string);
 
-          if (!user || !user.hashedPassword) {
+          if (!user || !user.hashedPassword || user.is_active !== true) {
             return null;
           }
 

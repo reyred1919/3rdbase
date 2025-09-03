@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
@@ -14,6 +13,14 @@ import { Target, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
@@ -41,6 +48,7 @@ export default function LoginPage() {
         redirect: false,
         username,
         password,
+        callbackUrl,
       });
 
       if (result?.error) {

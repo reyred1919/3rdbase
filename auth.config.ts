@@ -10,7 +10,8 @@ export const authConfig = {
     // which is not used by the middleware.
   ],
   pages: {
-    signIn: '/login',
+    signIn: `${process.env.NEXTAUTH_URL}/login`,
+    error: `${process.env.NEXTAUTH_URL}/auth/error`,
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {

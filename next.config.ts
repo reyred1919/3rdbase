@@ -4,7 +4,7 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
-    trustHostHeader: true,
+    trustHost: true,
   },
   typescript: {
     ignoreBuildErrors: true,

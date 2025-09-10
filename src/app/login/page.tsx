@@ -12,9 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Target, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
+
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<div>در حال بارگذاری...</div>}>
       <LoginPageContent />
     </Suspense>
   );

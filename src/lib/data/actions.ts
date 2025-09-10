@@ -345,7 +345,7 @@ export async function joinTeamWithCode(code: string): Promise<{ success: boolean
   const userId = await getUserIdOrThrow();
 
   if (!code || typeof code !== 'string' || code.trim() === '') {
-    return { success: false, message: 'کد دعوت نامعتبر است.' };
+    return { success: false, message: 'کد دعوت وارد شده معتبر نیست یا خالی است.' };
   }
 
   const invitation = await db.teamInvitation.findUnique({

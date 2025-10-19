@@ -29,7 +29,7 @@ export default function LandingPage() {
             <Link href="/login">شروع کنید</Link>
           </Button>
            <Image 
-            src="/images/hero-800x400.jpg"
+            src="/images/landing.webp"
             alt="نمایی از داشبورد برنامه"
             width={800}
             height={400}

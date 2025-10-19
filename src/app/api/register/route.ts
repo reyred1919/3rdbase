@@ -63,23 +63,23 @@ export async function POST(req: Request) {
         });
 
         if (teamToJoin) {
-            // Create membership link
-            await tx.teamMembership.create({
-                data: {
-                    userId: newUser.id,
-                    teamId: teamToJoin.id,
-                    role: 'member' // All invited users are members by default
-                }
-            });
-            // Create a member record
-            await tx.member.create({
-                data: {
-                    teamId: teamToJoin.id,
-                    userId: newUser.id,
-                    name: `${firstName} ${lastName}`,
-                    avatarUrl: `https://placehold.co/40x40.png?text=${firstName.charAt(0)}`
-                }
-            });
+          // Create membership link
+          await tx.teamMembership.create({
+            data: {
+              user: { connect: { id: newUser.id } },
+              team: { connect: { id: teamToJoin.id } },
+              role: 'member' // All invited users are members by default
+            }
+          });
+          // Create a member record
+          await tx.member.create({
+            data: {
+              team: { connect: { id: teamToJoin.id } },
+              user: { connect: { id: newUser.id } },
+              name: `${firstName} ${lastName}`,
+              avatarUrl: `https://placehold.co/40x40.png?text=${firstName.charAt(0)}`
+            }
+          });
         }
     });
 

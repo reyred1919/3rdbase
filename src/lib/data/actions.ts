@@ -279,7 +279,15 @@ export async function addTeam(teamData: TeamFormData) {
     data: {
       name: teamData.name,
       ownerId: userId,
-      memberships: { create: { userId, role: 'admin' } },
+      memberships: { 
+        create: [
+          { user: { connect: { id: userId } }, role: 'admin' },
+          ...(teamData.members || []).filter(m => m.id).map(m => ({
+            user: { connect: { id: parseInt(m.id) } },
+            role: 'member'
+          }))
+        ] 
+      },
       members: {
         create: (teamData.members || []).map((m: any) => ({
           name: m.name,
@@ -314,7 +322,26 @@ export async function updateTeam(teamData: TeamFormData) {
     for (const memberData of incomingMembers) {
       if (memberData.id && currentMemberIds.has(parseInt(memberData.id))) {
         await tx.member.update({ where: { id: parseInt(memberData.id) }, data: { name: memberData.name } });
+      } else if (memberData.id) {
+        // New connected user: create member and membership
+        const newMember = await tx.member.create({
+          data: {
+            name: memberData.name,
+            teamId,
+            avatarUrl: `https://placehold.co/40x40.png?text=${memberData.name.charAt(0)}`,
+            user: { connect: { id: parseInt(memberData.id) } },
+          }
+        });
+        // Create membership for the user
+        await tx.teamMembership.create({
+          data: {
+            user: { connect: { id: parseInt(memberData.id) } },
+            team: { connect: { id: teamId } },
+            role: 'member'
+          }
+        });
       } else {
+        // New non-connected member (placeholder)
         await tx.member.create({
           data: {
             name: memberData.name,
@@ -364,13 +391,19 @@ export async function joinTeamWithCode(code: string): Promise<{ success: boolean
   if (!user) return { success: false, message: 'کاربر یافت نشد.' };
 
   await db.$transaction([
-    db.teamMembership.create({ data: { userId, teamId: invitation.teamId, role: 'member' } }),
+    db.teamMembership.create({ 
+      data: { 
+        user: { connect: { id: userId } },
+        team: { connect: { id: invitation.teamId } },
+        role: 'member' 
+      } 
+    }),
     db.member.create({
       data: {
         name: `${user.firstName} ${user.lastName}`,
         avatarUrl: `https://placehold.co/40x40.png?text=${user.firstName?.charAt(0)}`,
-        teamId: invitation.teamId,
-        // userId : userId,
+        team: { connect: { id: invitation.teamId } },
+        user: { connect: { id: userId } },
       },
     }),
   ]);

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Target, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import Image from 'next/image';
 
 
 export default function LoginPage() {
@@ -82,7 +83,13 @@ function LoginPageContent() {
       <Card className="w-full max-w-sm shadow-2xl">
         <CardHeader className="text-center">
           <Link href="/" className="flex justify-center items-center gap-2 mb-4">
-            <Target className="h-8 w-8 text-primary" />
+            <Image 
+              src="/images/logo.png"
+              alt="لوگوی ردیاب OKR"
+              width={32}
+              height={32}
+              className="h-8 w-8 text-primary"
+            />
           </Link>
           <CardTitle className="font-headline text-2xl">ورود به ردیاب OKR</CardTitle>
           <CardDescription>برای دسترسی به داشبورد خود وارد شوید.</CardDescription>

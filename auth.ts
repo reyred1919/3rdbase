@@ -19,6 +19,7 @@ export const {
   ...authConfig,
   adapter: PrismaAdapter(db) as Adapter,
   session: { strategy: 'jwt' },
+  trustHost: process.env.NODE_ENV === 'production',
   providers: [
     CredentialsProvider({
         name: 'credentials',

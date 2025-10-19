@@ -7,7 +7,6 @@ import type {
   CalendarSettingsFormData, TeamWithMembership, KeyResult, OkrCycleFormData, User 
 } from '@/types/okr';
 import { revalidatePath } from 'next/cache';
-import { suggestOkrsImprovements } from '@/ai/flows/suggest-okr-improvements';
 
 async function getUserIdOrThrow(): Promise<number> {
   const session = await auth();
@@ -497,6 +496,7 @@ export async function getOkrImprovementSuggestionsAction(objective: Objective) {
     }))
   };
   try {
+    const { suggestOkrsImprovements } = await import('@/ai/flows/suggest-okr-improvements');
     return await suggestOkrsImprovements(inputForAI);
   } catch (error) {
     console.error("AI suggestion failed:", error);

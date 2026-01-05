@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 import { getUserByUsername } from '@/lib/data/actions';
+import { sendWelcomeEmail, sendAdminNotificationEmail } from '@/lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -81,6 +82,23 @@ export async function POST(req: Request) {
             }
           });
         }
+    });
+
+    // Send emails (non-blocking)
+    // 1. Send welcome email to user
+    sendWelcomeEmail(email, firstName).catch((err) => {
+      console.error('Failed to send welcome email:', err);
+    });
+
+    // 2. Send notification email to admin
+    sendAdminNotificationEmail({
+      firstName,
+      lastName,
+      email,
+      username,
+      mobile,
+    }).catch((err) => {
+      console.error('Failed to send admin notification email:', err);
     });
 
     return NextResponse.json({ message: 'کاربر با موفقیت ایجاد شد. اکنون می‌توانید وارد شوید.' }, { status: 201 });

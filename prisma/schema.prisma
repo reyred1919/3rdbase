@@ -193,3 +193,26 @@ enum RiskStatus {
   UNDER_REVIEW
   RESOLVED
 }
+
+// =====================
+// Admin Panel Models
+// =====================
+
+model Admin {
+  id             Int       @id @default(autoincrement())
+  username       String    @unique
+  email          String    @unique
+  hashedPassword String
+  firstName      String?
+  lastName       String?
+  role           AdminRole @default(admin)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+enum AdminRole {
+  super_admin
+  admin
+  viewer
+}

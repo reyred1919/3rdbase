@@ -335,3 +335,266 @@ export async function sendAdminNotificationEmail(user: NewUserInfo) {
   });
 }
 
+export async function sendAccountActivatedEmail(to: string, firstName: string) {
+  const html = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="fa">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Tahoma', 'Arial', sans-serif;
+          background-color: #f4f4f7;
+          margin: 0;
+          padding: 0;
+          direction: rtl;
+        }
+        .container {
+          max-width: 600px;
+          margin: 40px auto;
+          background-color: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          padding: 32px;
+          text-align: center;
+        }
+        .header h1 {
+          color: #ffffff;
+          margin: 0;
+          font-size: 28px;
+        }
+        .content {
+          padding: 32px;
+          color: #374151;
+          line-height: 1.8;
+        }
+        .content h2 {
+          color: #1f2937;
+          margin-top: 0;
+        }
+        .success-icon {
+          text-align: center;
+          margin: 24px 0;
+        }
+        .success-icon span {
+          display: inline-block;
+          width: 80px;
+          height: 80px;
+          background-color: #10b981;
+          border-radius: 50%;
+          line-height: 80px;
+          font-size: 40px;
+          color: white;
+        }
+        .info-box {
+          background-color: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          border-radius: 8px;
+          padding: 20px;
+          margin: 24px 0;
+          text-align: center;
+        }
+        .info-box p {
+          margin: 8px 0;
+          color: #065f46;
+          font-size: 16px;
+        }
+        .button {
+          display: inline-block;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: #ffffff !important;
+          padding: 16px 40px;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: bold;
+          font-size: 16px;
+          margin: 16px 0;
+        }
+        .footer {
+          background-color: #f9fafb;
+          padding: 24px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 14px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .footer a {
+          color: #10b981;
+          text-decoration: none;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🎉 حساب شما فعال شد!</h1>
+        </div>
+        <div class="content">
+          <div class="success-icon">
+            <span>✓</span>
+          </div>
+          <h2>تبریک ${firstName} عزیز! 🎊</h2>
+          <p>
+            خبر خوب! حساب کاربری شما در <strong>Okayr</strong> با موفقیت فعال شد.
+          </p>
+          <div class="info-box">
+            <p>✅ حساب شما اکنون فعال است</p>
+            <p>🚀 آماده شروع هستید!</p>
+          </div>
+          <p>
+            از همین الان می‌توانید وارد سیستم شده و از تمام امکانات استفاده کنید.
+          </p>
+          <p style="text-align: center;">
+            <a href="https://app.okayr.ir/login" class="button">ورود به Okayr</a>
+          </p>
+          <p>
+            اگر سؤالی دارید، خوشحال می‌شویم کمکتان کنیم.
+          </p>
+          <p>
+            با آرزوی موفقیت،<br>
+            تیم Okayr
+          </p>
+        </div>
+        <div class="footer">
+          <p>این ایمیل از طرف <a href="https://app.okayr.ir">app.okayr.ir</a> ارسال شده است.</p>
+          <p>© ${new Date().getFullYear()} Okayr - تمامی حقوق محفوظ است.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: '🎉 حساب کاربری شما در Okayr فعال شد!',
+    html,
+  });
+}
+
+export async function sendAccountDeactivatedEmail(to: string, firstName: string) {
+  const html = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="fa">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Tahoma', 'Arial', sans-serif;
+          background-color: #f4f4f7;
+          margin: 0;
+          padding: 0;
+          direction: rtl;
+        }
+        .container {
+          max-width: 600px;
+          margin: 40px auto;
+          background-color: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          padding: 32px;
+          text-align: center;
+        }
+        .header h1 {
+          color: #ffffff;
+          margin: 0;
+          font-size: 28px;
+        }
+        .content {
+          padding: 32px;
+          color: #374151;
+          line-height: 1.8;
+        }
+        .content h2 {
+          color: #1f2937;
+          margin-top: 0;
+        }
+        .warning-icon {
+          text-align: center;
+          margin: 24px 0;
+        }
+        .warning-icon span {
+          display: inline-block;
+          width: 80px;
+          height: 80px;
+          background-color: #f59e0b;
+          border-radius: 50%;
+          line-height: 80px;
+          font-size: 40px;
+          color: white;
+        }
+        .info-box {
+          background-color: #fffbeb;
+          border: 1px solid #fcd34d;
+          border-radius: 8px;
+          padding: 20px;
+          margin: 24px 0;
+        }
+        .info-box p {
+          margin: 8px 0;
+          color: #92400e;
+        }
+        .footer {
+          background-color: #f9fafb;
+          padding: 24px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 14px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .footer a {
+          color: #f59e0b;
+          text-decoration: none;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>⚠️ وضعیت حساب کاربری</h1>
+        </div>
+        <div class="content">
+          <div class="warning-icon">
+            <span>!</span>
+          </div>
+          <h2>سلام ${firstName} عزیز،</h2>
+          <p>
+            به اطلاع می‌رسانیم که حساب کاربری شما در <strong>Okayr</strong> به حالت غیرفعال درآمده است.
+          </p>
+          <div class="info-box">
+            <p>⏸️ حساب شما موقتاً غیرفعال شده است</p>
+            <p>📧 برای اطلاعات بیشتر با پشتیبانی تماس بگیرید</p>
+          </div>
+          <p>
+            اگر فکر می‌کنید این اتفاق به اشتباه افتاده یا سؤالی دارید، لطفاً با تیم پشتیبانی ما تماس بگیرید.
+          </p>
+          <p>
+            با احترام،<br>
+            تیم Okayr
+          </p>
+        </div>
+        <div class="footer">
+          <p>این ایمیل از طرف <a href="https://app.okayr.ir">app.okayr.ir</a> ارسال شده است.</p>
+          <p>© ${new Date().getFullYear()} Okayr - تمامی حقوق محفوظ است.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: '⚠️ وضعیت حساب کاربری شما در Okayr',
+    html,
+  });
+}
+

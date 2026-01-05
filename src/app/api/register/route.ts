@@ -101,7 +101,7 @@ export async function POST(req: Request) {
       console.error('Failed to send admin notification email:', err);
     });
 
-    return NextResponse.json({ message: 'کاربر با موفقیت ایجاد شد. اکنون می‌توانید وارد شوید.' }, { status: 201 });
+    return NextResponse.json({ message: 'کاربر با موفقیت ایجاد شد. بعد از بررسی اطلاعات شما، نتیجه فعال‌سازی از طریق ایمیل برای شما ارسال می‌شود.' }, { status: 201 });
   
   } catch (error) {
     console.error('Registration error:', error);
